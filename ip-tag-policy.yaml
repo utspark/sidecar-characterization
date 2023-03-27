@@ -1,0 +1,31 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: filter-ip-tag-svc
+  namespace: istio-system
+spec:
+  workloadSelector:
+    labels:
+      app: echoserver
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: SIDECAR_INBOUND
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.filters.network.http_connection_manager"
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: envoy.filters.http.ip_tagging
+          # typed_config:
+            # "@type": type.googleapis.com/envoy.extensions.filters.http.ip_tagging.v3.IPTagging
+            # type_url: type.googleapis.com/envoy.extensions.filters.http.ip_tagging.v3.IPTagging
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.ip_tagging.v3.IPTagging
+            request_type: BOTH
+            ip_tags:
+            - ip_tag_name: tagged_by_envoy
+              ip_list: 
+              - address_prefix: 10.111.70.0
