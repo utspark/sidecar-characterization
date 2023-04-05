@@ -1,0 +1,23 @@
+version: '3'
+services:
+  # front-envoy:
+  #   image: envoyproxy/envoy-alpine:v1.7.0
+  #   volumes:
+  #     - ./front-envoy.yaml:/etc/envoy-config.yaml
+  #   ports:
+  #     - "8080:80"
+  #     - "9901:9901"
+  #   command: "/usr/local/bin/envoy -c /etc/envoy-config.yaml --v2-config-only -l info --service-cluster 'front-envoy' --service-node 'front-envoy' --log-format '[METADATA][%Y-%m-%d %T.%e][%t][%l][%n] %v'"
+
+  # echo_envoy:
+  #   image: envoyproxy/envoy-alpine:v1.7.0
+  #   volumes:
+  #     - ./envoy-config.yaml:/etc/envoy-config.yaml
+  #   ports:
+  #     - "8789:8789"
+  #   command: "/usr/local/bin/envoy -c /etc/envoy-config.yaml --v2-config-only -l info --service-cluster 'echo-envoy' --service-node 'echo-envoy' --log-format '[METADATA][%Y-%m-%d %T.%e][%t][%l][%n] %v'"  
+
+  echo_server:
+    image: ealen/echo-server
+    ports:
+    - "3000:80" 
