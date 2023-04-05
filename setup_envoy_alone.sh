@@ -10,6 +10,14 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o 
 echo "deb [arch="$ARCH" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
   $OS stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Allow docker commands without sudo
+sudo usermod -aG docker $USER
+rm /etc/containerd/config.toml
+sudo systemctl restart containerd
+
 # Install Envoy
 sudo apt update
 # sudo apt install apt-transport-https gnupg2 curl lsb-release 
@@ -19,3 +27,5 @@ echo a077cb587a1b622e03aa4bf2f3689de14658a9497a9af2c427bba5f4cc3c4723 /usr/share
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/getenvoy-keyring.gpg] https://deb.dl.getenvoy.io/public/deb/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/getenvoy.list
 sudo apt update
 sudo apt install -y getenvoy-envoy
+
+echo "Close shell and reopen to use docker commands without sudo"
