@@ -19,9 +19,6 @@ spec:
         operation: INSERT_BEFORE
         value:
           name: envoy.filters.http.ip_tagging
-          # typed_config:
-            # "@type": type.googleapis.com/envoy.extensions.filters.http.ip_tagging.v3.IPTagging
-            # type_url: type.googleapis.com/envoy.extensions.filters.http.ip_tagging.v3.IPTagging
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.http.ip_tagging.v3.IPTagging
             request_type: BOTH

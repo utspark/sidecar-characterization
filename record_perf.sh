@@ -1,62 +1,55 @@
 #!/usr/bin/fish
 
-set DIR './perf_data'
-set SUB_DIR "$argv[2]"
+# arg1 is stat or record
+# arg2 is the policy applied
+# arg3 is the stat to be recorded
 
-# set CONT_PID 128654
-# set CONT_PPID 128633
-# set PROXY_ID 128609 # from old container using docker proxy
+mkdir -p perf_data/stat/no_filter perf_data/stat/rate_limit perf_data/stat/ip_tagging perf_data/stat/both perf_data/stat/admit_ctrl
+mkdir -p perf_data/record/no_filter perf_data/record/rate_limit perf_data/record/ip_tagging perf_data/record/both perf_data/record/admit_ctrl
+
 set PROXY_ID 700772
 
-set SUFFIX "$argv[3]"
+set SUFFIX "_$argv[3]"
 set EXT "data"
 
-if string match -q -e 'st' "$argv[1]"
+if [ "$argv[1]" = 'stat' ]
 	set CMD 'stat'
-	if [ "$SUFFIX" = 'icache' ]
+	if string match -q -e 'icache' "$SUFFIX"
 		set FLAGS '-e' 'icache.hit,icache.ifetch_stall,icache.misses' '-I' '100'
-		set SUFFIX '_icache'
-	else if [ "$SUFFIX" = 'mpki' ]
+	else if string match -q -e 'mpki' "$SUFFIX"
 		set FLAGS '-M' 'L1MPKI' '-I' '100' '-x' ','
-		set SUFFIX '_mpki'
-	else if [ "$SUFFIX" = 'branch' ]
+	else if string match -q -e 'branch' "$SUFFIX"
 		set FLAGS '-M' 'IpMispredict' '-I' '100' '-x' ','
-		set SUFFIX '_branch'
-	else if [ "$SUFFIX" = 'latency' ]
-		set FLAGS '-M' 'Load_Miss_Real_Latency' '-I' '100'
-		set SUFFIX '_latency'
+	# else if string match -q -e 'load' "$SUFFIX"
+	# 	set FLAGS '-M' 'IpL' '-I' '100' '-x' ','
+	# else if string match -q -e 'store' "$SUFFIX"
+	# 	set FLAGS '-M' 'IpS' '-I' '100' '-x' ','
+	# else if string match -q -e 'fill' "$SUFFIX"
+	# 	set FLAGS '-M' 'L1D_Cache_Fill_BW' '-I' '100' '-x' ','
+	# else if [ "$SUFFIX" = 'latency' ] #unused since can't be recorded
+	# 	set FLAGS '-M' 'Load_Miss_Real_Latency' '-I' '100'
 	else
 		set FLAGS '-e' 'cycles:u,cycles:k,instructions:u,instructions:k' '-I' '100'
 		set SUFFIX ''
 	end
 	set EXT "csv"
-else if string match -q -e 're' "$argv[1]"
+else if [ "$argv[1]" = 'record' ]
 	set CMD 'record'
-	if [ "$SUFFIX" = 'icache' ]
+	if string match -q -e 'icache' "$SUFFIX"
 		set FLAGS '-g' '-e' 'icache.misses' '-c' '10000'
-		set SUFFIX '_icache'
-	else if [ "$SUFFIX" = 'branch' ]
+	else if string match -q -e 'branch' "$SUFFIX"
 		set FLAGS '-g' '-e' 'branch-misses' '-c' '10000'
-		set SUFFIX '_branch'
 	else
 		set FLAGS '-g' '-F' '10'
 		set SUFFIX ''
 	end
-else if string match -q -e 'tr' "$argv[1]"
+else if [ "$argv[1]" = 'trace' ]
 	set CMD 'trace'
 	set FLAGS '-s' '--syscalls' '--call-graph' 'fp'
 end
 
-set DIR "$DIR/$CMD/$SUB_DIR"
-
-# set PROCESS "$argv[2]"
-
-# if [ "$PROCESS" = 'pid' ]
-# 	set PID $CONT_PID
-# else if [ "$PROCESS" = 'ppid' ]
-# 	set PID $CONT_PPID
-# else
-
+set SUB_DIR "$argv[2]"
+set DIR "perf_data/$CMD/$argv[2]"
 set PID $PROXY_ID
 
 set RATE "$argv[-1]"

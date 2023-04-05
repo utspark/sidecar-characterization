@@ -16,7 +16,7 @@ spec:
             filter:
               name: "envoy.filters.network.http_connection_manager"
       patch:
-        operation: INSERT_BEFORE
+        operation: INSERT_FIRST
         value:
           name: envoy.filters.http.admission_control
           typed_config:
