@@ -16,7 +16,7 @@ sudo apt install fish
 
 # Setup echo server and its Envoy proxy
 # docker compose up -d
-# envoy -c envoy-demo.yaml --concurrency 1
+# envoy -c envoy-demo.yaml --concurrency #
 
 # Need to turn off SMT, taskset proxy to some number of cores
 # sudo su -

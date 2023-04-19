@@ -11,7 +11,8 @@ echo "deb [arch="$ARCH" signed-by=/etc/apt/keyrings/docker.gpg] https://download
   $OS stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 sudo apt-get update
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+sudo apt-get install docker.io docker-dompose-plugin # rerunning this line installs docker correctly?
 
 # Allow docker commands without sudo
 sudo usermod -aG docker $USER
@@ -27,5 +28,7 @@ echo a077cb587a1b622e03aa4bf2f3689de14658a9497a9af2c427bba5f4cc3c4723 /usr/share
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/getenvoy-keyring.gpg] https://deb.dl.getenvoy.io/public/deb/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/getenvoy.list
 sudo apt update
 sudo apt install -y getenvoy-envoy
+
+docker compose up -d
 
 echo "Close shell and reopen to use docker commands without sudo"

@@ -4,8 +4,14 @@
 # arg2 is the policy applied
 # arg3 is the stat to be recorded
 
+# 0.0.0.0:10000 is the default container ip and port for standalone envoy
+set IP '0.0.0.0'
+set PORT '10000'
+
 mkdir -p perf_data/stat/no_filter perf_data/stat/rate_limit perf_data/stat/ip_tagging perf_data/stat/both perf_data/stat/admit_ctrl
 mkdir -p perf_data/record/no_filter perf_data/record/rate_limit perf_data/record/ip_tagging perf_data/record/both perf_data/record/admit_ctrl
+
+echo 'Make sure you update the proxy pid to run perf on'
 
 set PROXY_ID 700772
 
@@ -54,7 +60,7 @@ set PID $PROXY_ID
 
 set RATE "$argv[-1]"
 
-wrk -t5 -d12 "-R$RATE" "http://10.111.70.135:80/param?query=demo" > "$DIR"/latency_stats_"$RATE$SUFFIX".txt &
+wrk -t5 -d12 "-R$RATE" "http://$IP:$PORT/param?query=demo" > "$DIR"/latency_stats_"$RATE$SUFFIX".txt &
 echo "Starting requests to server with $RATE req/s"
 
 set OUTPUT_FILE "$DIR"/"$RATE$SUFFIX"."$EXT"
