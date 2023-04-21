@@ -19,6 +19,7 @@ Run the setup_perf.sh to install all components required to start profiling.
 # Before profiling
 Turn off SMT with 
 `sudo su -`
+
 `echo off > /sys/devices/system/cpu/smt/control`
 
 Find Envoy proxy pid and update it in record_perf.sh.
@@ -26,9 +27,13 @@ Find Envoy proxy pid and update it in record_perf.sh.
 # Profiling
 The record_perf.sh will take in 3-4 args.
 Ex. `./record_perf.sh stat no_filter 500` or `./record_perf.sh stat rate_limit mpki 1500`
+
 arg1 = stat or record, the mode that perf should run
+
 arg2 = policy applied to Envoy (no_filter, rate_limit, ip_tagging, both)
+
 arg3 = OPTIONAL metric or event to run perf on (see script for options), if omitted, default is cycles and instructions
+
 arg4 = rate of traffic to send to the echo server
 
 Recording should be stopped after 10 seconds using Ctrl+C.

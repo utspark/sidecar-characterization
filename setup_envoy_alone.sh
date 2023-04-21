@@ -12,7 +12,7 @@ echo "deb [arch="$ARCH" signed-by=/etc/apt/keyrings/docker.gpg] https://download
 
 sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin
-sudo apt-get install docker.io docker-dompose-plugin # rerunning this line installs docker correctly?
+sudo apt-get install docker.io docker-compose-plugin # rerunning this line installs docker correctly?
 
 # Allow docker commands without sudo
 sudo usermod -aG docker $USER
