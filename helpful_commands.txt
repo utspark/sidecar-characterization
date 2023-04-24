@@ -7,3 +7,5 @@ ps -aux | grep envoy | awk "${print $2}"
 # limit cpus that a process can use
 taskset -pc [range or list of cores] PID
 
+# limit cpu time
+cpulimit -p PID -l PERCENT -b

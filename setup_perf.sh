@@ -11,6 +11,7 @@ cd ..
 # Install fish shell, cuz that's what record_perf.sh is written in
 sudo apt install fish
 
+sudo apt install cpulimit
 # Set up echo server with Envoy proxy OR
 # kubectl apply -f echo.proxy.yaml
 
