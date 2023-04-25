@@ -8,13 +8,14 @@
 set IP '0.0.0.0'
 set PORT '10000'
 
-mkdir -p perf_data/stat/no_filter perf_data/stat/rate_limit perf_data/stat/ip_tagging perf_data/stat/both perf_data/stat/admit_ctrl
-mkdir -p perf_data/record/no_filter perf_data/record/rate_limit perf_data/record/ip_tagging perf_data/record/both perf_data/record/admit_ctrl
+mkdir -p perf_data/stat/no_filter perf_data/stat/rate_limit perf_data/stat/ip_tagging perf_data/stat/both #perf_data/stat/admit_ctrl
+mkdir -p perf_data/record/no_filter perf_data/record/rate_limit perf_data/record/ip_tagging perf_data/record/both #perf_data/record/admit_ctrl
 
 # Auto updates the envoy pid to be profiled
-# Manually set the PID if running with a service due to multiple envoy processses
+# Manually set the PID if running with a service mash due to multiple envoy processes
 echo 'Make sure you taskset and limit cpu time for the envoy process'
 set PROXY_ID (ps -C "envoy" -o pid= | string trim)
+# set PROXY_ID 2425181
 
 set SUFFIX "_$argv[3]"
 set EXT "data"
@@ -29,12 +30,14 @@ if [ "$argv[1]" = 'stat' ]
 		set FLAGS '-M' 'IpMispredict' '-I' '100' '-x' ','
 	else if string match -q -e 'branch' "$SUFFIX"
 		set FLAGS '-e' 'branch-misses' '-I' '100' '-x' ','
+	else if string match -q -e 'llc' "$SUFFIX"
+		set FLAGS '-e' 'mem_load_uops_retired.llc_hit,mem_load_uops_retired.llc_miss' '-I' '100' '-x' ','
 	# else if string match -q -e 'load' "$SUFFIX"
 	# 	set FLAGS '-M' 'IpL' '-I' '100' '-x' ','
 	# else if string match -q -e 'store' "$SUFFIX"
 	# 	set FLAGS '-M' 'IpS' '-I' '100' '-x' ','
-	else if string match -q -e 'fill' "$SUFFIX"
-	 	set FLAGS '-M' 'L1D_Cache_Fill_BW' '-I' '100' '-x' ','
+	# else if string match -q -e 'fill' "$SUFFIX"
+	 	# set FLAGS '-M' 'L1D_Cache_Fill_BW' '-I' '100' '-x' ','
 	# else if [ "$SUFFIX" = 'latency' ] #unused since can't be recorded
 	# 	set FLAGS '-M' 'Load_Miss_Real_Latency' '-I' '100'
 	else
@@ -63,7 +66,10 @@ set PID $PROXY_ID
 
 set RATE "$argv[-1]"
 
-wrk -t5 -d12 "-R$RATE" "http://$IP:$PORT/param?query=demo" > "$DIR"/latency_stats_"$RATE$SUFFIX".txt &
+wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT/param?query=demo" > "$DIR"/latency_stats_"$RATE$SUFFIX".txt &
+# other wrk commands to send different requests to the echo server
+# wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT/?echo_header=wrk:0" > "$DIR"/latency_stats_"$RATE$SUFFIX_0".txt &
+# wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT/?echo_header=wrk:1" > "$DIR"/latency_stats_"$RATE$SUFFIX_1".txt &
 echo "Starting requests to server with $RATE req/s"
 
 set OUTPUT_FILE "$DIR"/"$RATE$SUFFIX"."$EXT"
