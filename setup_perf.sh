@@ -19,6 +19,6 @@ sudo apt install cpulimit
 # docker compose up -d
 # envoy -c envoy-demo.yaml --concurrency #
 
-# Need to turn off SMT, taskset proxy to some number of cores
-# sudo su -
-# echo off > /sys/devices/system/cpu/smt/control
+echo "RMINDER: turn off SMT, run:
+sudo su - 
+echo off > /sys/devices/system/cpu/smt/control"

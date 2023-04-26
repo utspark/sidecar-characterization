@@ -18,14 +18,17 @@ static_resources:
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
           http_filters:
-          - name: envoy.filters.http.ip_tagging
+          - name: envoy.filters.http.fault
             typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.ip_tagging.v3.IPTagging
-              request_type: BOTH
-              ip_tags:
-              - ip_tag_name: tagged_by_envoy
-                ip_list: 
-                - address_prefix: 0.0.0.0
+              "@type": type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+              # headers: 
+              # - name: :x-envoy-fault-abort-request
+              #   string_match:
+              #     exact: 404
+              abort:
+                header_abort: {}
+                percentage:
+                  numerator: 100
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

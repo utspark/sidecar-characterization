@@ -13,7 +13,7 @@ set CPU_LIMIT $argv[3]
 echo "Running envoy process with $POLICY applied with $NUM_CPUS worker threads"
 envoy -c $POLICY --concurrency $NUM_CPUS > /dev/null 2>&1 &
 
-set PROXY_ID (ps -C "envoy" -o pid= | string trim)
+set PROXY_ID (ps -C "envoy" -o pid= | tail -1)
 
 if [ "$NUM_CPUS" = "1" ]
 	set CPU_LIST "0"
