@@ -2,19 +2,18 @@
 
 # arg1 is stat or record
 # arg2 is the policy applied
-# arg3 is the stat to be recorded
+# arg3 is the stat to be recorded (optional, default is instructions & cycles)
 # arg4 is request rate to envoy
 
-# 0.0.0.0:10000 is the default container ip and port for standalone envoy
+# 0.0.0.0:10000 is the default ip and port for standalone envoy
 set IP '0.0.0.0'
 set PORT '10000'
 
-mkdir -p perf_data/stat/no_filter perf_data/stat/rate_limit perf_data/stat/ip_tagging perf_data/stat/both #perf_data/stat/admit_ctrl
-mkdir -p perf_data/record/no_filter perf_data/record/rate_limit perf_data/record/ip_tagging perf_data/record/both #perf_data/record/admit_ctrl
+# mkdir -p perf_data/stat/no_filter perf_data/stat/rate_limit perf_data/stat/ip_tagging perf_data/stat/both #perf_data/stat/admit_ctrl
+# mkdir -p perf_data/record/no_filter perf_data/record/rate_limit perf_data/record/ip_tagging perf_data/record/both #perf_data/record/admit_ctrl
 
 # Auto updates the envoy pid to be profiled
 # Manually set the PID if running with a service mash due to multiple envoy processes
-echo 'Make sure you taskset and limit cpu time for the envoy process'
 set PROXY_ID (ps -C "envoy" -o pid= | tail -1)
 # set PROXY_ID 2425181
 
@@ -62,23 +61,24 @@ else if [ "$argv[1]" = 'trace' ]
 end
 
 set SUB_DIR "$argv[2]"
-set DIR "perf_data/$CMD/$argv[2]"
+set DIR "perf_data/l7/$CMD/$argv[2]"
 set PID $PROXY_ID
 
 set RATE "$argv[-1]"
+set OUTPUT_FILE "$DIR"/"$RATE$SUFFIX"."$EXT"
 
-wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT" > "$DIR"/latency_stats_"$RATE$SUFFIX".txt &
+echo "Starting requests to server with $RATE req/s"
+wrk -t1 -c1 -d11 "-R$RATE" "http://$IP:$PORT" > "$DIR"/latency_stats_"$RATE$SUFFIX".txt &
 # other wrk commands to send different requests to the echo server
-# below is for fault injection
+# below is for fault injection (envoy-header-inspect)
 # wrk -t1 -c1 -d12 "-R$RATE" -s header.lua "http://$IP:$PORT" > "$DIR"/latency_stats_"$RATE$SUFFIX_header".txt &
+
+# below is for routing (envoy-routing)
+# wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT/route2" > "$DIR"/latency_stats_"$RATE$SUFFIX_header".txt &
 
 # headers for echo server
 # wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT/?echo_header=wrk:0" > "$DIR"/latency_stats_"$RATE$SUFFIX_0".txt &
 # wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT/?echo_header=wrk:1" > "$DIR"/latency_stats_"$RATE$SUFFIX_1".txt &
-echo "Starting requests to server with $RATE req/s"
-
-set OUTPUT_FILE "$DIR"/"$RATE$SUFFIX"."$EXT"
-
 
 echo "Running 'perf $CMD $FLAGS' on process $PID, outputting to $OUTPUT_FILE..."
 echo "Press Ctrl+C to stop recording"

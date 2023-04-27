@@ -18,31 +18,6 @@ static_resources:
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
           http_filters:
-          - name: envoy.filters.http.local_ratelimit
-            typed_config:
-              "@type": type.googleapis.com/udpa.type.v1.TypedStruct
-              type_url: type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
-              value:
-                stat_prefix: http_local_rate_limiter
-                token_bucket:
-                  max_tokens: 1000
-                  tokens_per_fill: 1000
-                  fill_interval: 1s
-                filter_enabled:
-                  runtime_key: local_rate_limit_enabled
-                  default_value:
-                    numerator: 100
-                    denominator: HUNDRED
-                filter_enforced:
-                  runtime_key: local_rate_limit_enforced
-                  default_value:
-                    numerator: 100
-                    denominator: HUNDRED
-                response_headers_to_add:
-                  - append: false
-                    header:
-                      key: x-local-rate-limit
-                      value: 'true'
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -54,11 +29,15 @@ static_resources:
               domains: ["*"]
               routes:
               - match:
+                  prefix: "/route2"
+                # route:
+                #   cluster: service_envoyproxy_2
+                direct_response:
+                  status: 202
+              - match:
                   prefix: "/"
                 # route:
                 #   cluster: service_envoyproxy_io
-                # Respond to traffic without proxying to an upstream cluster
-                # Either use direct_response or route
                 direct_response:
                   status: 200
 
@@ -77,6 +56,20 @@ static_resources:
               socket_address:
                 address: 0.0.0.0
                 port_value: 3000
+  - name: service_envoyproxy_2
+    connect_timeout: 0.25s
+    type: STATIC
+    # Comment out the following line to test on v6 networks
+    dns_lookup_family: V4_ONLY
+    load_assignment:
+      cluster_name: service_envoyproxy_2
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 0.0.0.0
+                port_value: 3100
     circuit_breakers:
       thresholds:
         - priority: DEFAULT

@@ -1,0 +1,52 @@
+#!/bin/bash
+# $1 = number of cpus for the envoy proxy
+# $2 = cpu limit percentage for envoy proxy
+
+declare -A POLICIES
+POLICIES=( [no_filter]=envoy-demo.yaml [rate_limit]=envoy-rate-limit.yaml
+    [ip_tagging]=envoy-ip-tag.yaml [both]=envoy-ip-rate.yaml 
+    [header_inspect]=envoy-header-inspect.yaml [routing]=envoy-routing.yaml)
+STATS=( '' mpki ipmispredict branch icache llc )
+REQ_RATES=( 500 1000 1500 1800 )
+
+# mkdir -p perf_data/l7/stat/no_filter perf_data/l7/stat/rate_limit perf_data/l7/stat/ip_tagging perf_data/l7/stat/routing perf_data/l7/stat/header_inspect #perf_data/stat/both #perf_data/stat/admit_ctrl
+
+# Start envoy with no filter config
+# ./setup_envoy_alone.sh
+# ./setup_perf.sh
+
+for policy in "${!POLICIES[@]}"
+do
+    # echo $key ${POLICIES[$key]}
+    mkdir -p perf_data/l7/stat/$policy
+
+    ./start_envoy.sh ${POLICIES[$policy]} $1 $2 &
+    PID=$(ps -C "envoy" -o pid= | tail -1)
+    sleep 5
+
+    for stat in "${STATS[@]}"
+    do
+        for req_rate in "${REQ_RATES[@]}"
+        do
+            # echo $1 $stat $req_rate
+            # Allow wrk to finish recording latency stats
+            timeout 13 ./record_perf.sh stat $policy $stat $req_rate
+            sleep 5
+        done
+    done
+
+    kill $PID
+    sleep 5
+
+    echo Done running collecting all stats for $policy
+done
+
+# # Start envoy with RBAC network filter config
+# sudo ./start_envoy.sh envoy-l4-ip-filter.yaml 1 100 &
+# PID2=(ps -C "envoy" -o pid=)
+# sleep 5
+
+# # Test RBAC with request rates of 500, 1000
+# sudo timeout 10 ./perf-l4.sh stat rbac 500
+# sudo timeout 10 ./perf-l4.sh stat rbac 1000
+# sudo kill $PID2
