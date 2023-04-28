@@ -30,16 +30,16 @@ static_resources:
               routes:
               - match:
                   prefix: "/route2"
-                # route:
-                #   cluster: service_envoyproxy_2
-                direct_response:
-                  status: 202
+                route:
+                  cluster: service_envoyproxy_2
+                #direct_response:
+                  #status: 202
               - match:
                   prefix: "/"
-                # route:
-                #   cluster: service_envoyproxy_io
-                direct_response:
-                  status: 200
+                route:
+                  cluster: service_envoyproxy_io
+                #direct_response:
+                  #status: 200
 
   clusters:
   - name: service_envoyproxy_io

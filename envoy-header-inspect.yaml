@@ -37,12 +37,12 @@ static_resources:
               routes:
               - match:
                   prefix: "/"
-                # route:
-                #   cluster: service_envoyproxy_io
+                route:
+                  cluster: service_envoyproxy_io
                 # Respond to traffic without proxying to an upstream cluster
                 # Either use direct_response or route
-                direct_response:
-                  status: 200
+                #                direct_response:
+                #                  status: 200
 
   clusters:
   - name: service_envoyproxy_io

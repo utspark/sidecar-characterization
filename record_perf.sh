@@ -20,18 +20,20 @@ set PROXY_ID (ps -C "envoy" -o pid= | tail -1)
 set SUFFIX "_$argv[3]"
 set EXT "data"
 
+set STAT_FLAGS '-I' '100' '--interval-count' '110' '-x' ','
+
 if [ "$argv[1]" = 'stat' ]
 	set CMD 'stat'
 	if string match -q -e 'icache' "$SUFFIX"
-		set FLAGS '-e' 'icache.hit,icache.ifetch_stall,icache.misses' '-I' '100' '-x' ','
+		set FLAGS '-e' 'icache.hit,icache.ifetch_stall,icache.misses'
 	else if string match -q -e 'mpki' "$SUFFIX"
-		set FLAGS '-M' 'L1MPKI' '-I' '100' '-x' ','
+		set FLAGS '-M' 'L1MPKI'
 	else if string match -q -e 'ipmispredict' "$SUFFIX"
-		set FLAGS '-M' 'IpMispredict' '-I' '100' '-x' ','
+		set FLAGS '-M' 'IpMispredict'
 	else if string match -q -e 'branch' "$SUFFIX"
-		set FLAGS '-e' 'branch-misses' '-I' '100' '-x' ','
+		set FLAGS '-e' 'branch-misses'
 	else if string match -q -e 'llc' "$SUFFIX"					
-		set FLAGS '-e' 'offcore_response.all_requests.llc_hit.any_response,offcore_response.all_requests.llc_miss.any_response' '-I' '100' '-x' ','		# check if machine support these events via 'perf list llc'
+		set FLAGS '-e' 'offcore_response.all_requests.llc_hit.any_response,offcore_response.all_requests.llc_miss.any_response'		# check if machine support these events via 'perf list llc'
 	# else if string match -q -e 'load' "$SUFFIX"
 	# 	set FLAGS '-M' 'IpL' '-I' '100' '-x' ','
 	# else if string match -q -e 'store' "$SUFFIX"
@@ -41,9 +43,10 @@ if [ "$argv[1]" = 'stat' ]
 	# else if [ "$SUFFIX" = 'latency' ] #unused since can't be recorded
 	# 	set FLAGS '-M' 'Load_Miss_Real_Latency' '-I' '100'
 	else
-		set FLAGS '-e' 'cycles:u,cycles:k,instructions:u,instructions:k' '-I' '100' '-x' ','
+		set FLAGS '-e' 'cycles:u,cycles:k,instructions:u,instructions:k'
 		set SUFFIX ''
 	end
+	set FLAGS $FLAGS $STAT_FLAGS
 	set EXT "csv"
 else if [ "$argv[1]" = 'record' ]
 	set CMD 'record'
@@ -68,7 +71,14 @@ set RATE "$argv[-1]"
 set OUTPUT_FILE "$DIR"/"$RATE$SUFFIX"."$EXT"
 
 echo "Starting requests to server with $RATE req/s"
-wrk -t1 -c1 -d11 "-R$RATE" "http://$IP:$PORT" > "$DIR"/latency_stats_"$RATE$SUFFIX".txt &
+if [ "$argv[2]" = 'routing'  ]
+	wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT/route2" > "$DIR"/latency_stats_"$RATE$SUFFIX"_route2.txt &
+else if [ "$argv[2]" = 'header_inspect' ]
+	wrk -t1 -c1 -d12 "-R$RATE" -s fault_header.lua "http://$IP:$PORT" > "$DIR"/latency_stats_"$RATE$SUFFIX"_header.txt &
+end
+
+wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT" > "$DIR"/latency_stats_"$RATE$SUFFIX".txt &
+
 # other wrk commands to send different requests to the echo server
 # below is for fault injection (envoy-header-inspect)
 # wrk -t1 -c1 -d12 "-R$RATE" -s header.lua "http://$IP:$PORT" > "$DIR"/latency_stats_"$RATE$SUFFIX_header".txt &

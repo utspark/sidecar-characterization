@@ -25,8 +25,8 @@ static_resources:
               value:
                 stat_prefix: http_local_rate_limiter
                 token_bucket:
-                  max_tokens: 1000
-                  tokens_per_fill: 1000
+                  max_tokens: 3000
+                  tokens_per_fill: 3000
                   fill_interval: 1s
                 filter_enabled:
                   runtime_key: local_rate_limit_enabled
@@ -55,12 +55,12 @@ static_resources:
               routes:
               - match:
                   prefix: "/"
-                # route:
-                #   cluster: service_envoyproxy_io
+                route:
+                  cluster: service_envoyproxy_io
                 # Respond to traffic without proxying to an upstream cluster
                 # Either use direct_response or route
-                direct_response:
-                  status: 200
+                # direct_response:
+                #   status: 200
 
   clusters:
   - name: service_envoyproxy_io

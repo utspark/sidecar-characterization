@@ -34,8 +34,8 @@ static_resources:
                   cluster: service_envoyproxy_io
                 # Respond to traffic without proxying to an upstream cluster
                 # Either use direct_response or route
-                # direct_response:
-                #   status: 200
+                #                direct_response:
+                # status: 200
 
 
   clusters:
