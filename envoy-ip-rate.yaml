@@ -51,12 +51,20 @@ static_resources:
               - ip_tag_name: tagged_by_envoy
                 ip_list: 
                 - address_prefix: 0.0.0.0
+          - name: envoy.filters.http.fault
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+              abort:
+                http_status: 404
+                percentage:
+                  numerator: 100
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
               dynamic_stats: false
           route_config:
             name: local_route
+            validate_clusters: false
             virtual_hosts:
             - name: local_service
               domains: ["*"]
@@ -65,10 +73,6 @@ static_resources:
                   prefix: "/"
                 route:
                   cluster: service_envoyproxy_io
-                # Respond to traffic without proxying to an upstream cluster
-                # Either use direct_response or route
-                # direct_response:
-                #   status: 200
 
   clusters:
   - name: service_envoyproxy_io
