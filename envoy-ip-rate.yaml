@@ -21,8 +21,8 @@ static_resources:
               value:
                 stat_prefix: http_local_rate_limiter
                 token_bucket:
-                  max_tokens: 1000
-                  tokens_per_fill: 1000
+                  max_tokens: 6000
+                  tokens_per_fill: 6000
                   fill_interval: 1s
                 filter_enabled:
                   runtime_key: local_rate_limit_enabled

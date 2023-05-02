@@ -23,7 +23,7 @@ services:
     - "3000:80" 
 
 # another echo server for routing
-  echo_server:
+  echo_server_2:
     image: ealen/echo-server
     ports:
     - "3100:80"

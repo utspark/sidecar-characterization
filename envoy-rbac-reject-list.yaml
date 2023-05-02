@@ -330,7 +330,7 @@ static_resources:
               abort:
                 http_status: 404
                 percentage:
-                numerator: 100
+                  numerator: 100
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

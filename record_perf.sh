@@ -9,8 +9,18 @@
 set IP '0.0.0.0'
 set PORT '10000'
 
-# mkdir -p perf_data/stat/no_filter perf_data/stat/rate_limit perf_data/stat/ip_tagging perf_data/stat/both #perf_data/stat/admit_ctrl
-# mkdir -p perf_data/record/no_filter perf_data/record/rate_limit perf_data/record/ip_tagging perf_data/record/both #perf_data/record/admit_ctrl
+set -l L7_POLICIES no_filter rate_limit ip_tagging both header_inspect routing logging
+set -l L4_POLICIES http_inspect rbac_list rbac_one ip_filter
+
+if contains "$argv[2]" $L7_POLICIES
+	set POLICY_TYPE l7
+else if contains "$argv[2]" $L4_POLICIES
+	set POLICY_TYPE l4
+else
+	echo "Policy not found"
+	set POLICY_TYPE unknown
+end
+
 
 # Auto updates the envoy pid to be profiled
 # Manually set the PID if running with a service mash due to multiple envoy processes
@@ -34,6 +44,8 @@ if [ "$argv[1]" = 'stat' ]
 		set FLAGS '-e' 'branch-misses'
 	else if string match -q -e 'llc' "$SUFFIX"					
 		set FLAGS '-e' 'offcore_response.all_requests.llc_hit.any_response,offcore_response.all_requests.llc_miss.any_response'		# check if machine support these events via 'perf list llc'
+	else if string match -q -e 'context' "$SUFFIX"
+		set FLAGS '-e' 'context-switches'
 	# else if string match -q -e 'load' "$SUFFIX"
 	# 	set FLAGS '-M' 'IpL' '-I' '100' '-x' ','
 	# else if string match -q -e 'store' "$SUFFIX"
@@ -64,7 +76,7 @@ else if [ "$argv[1]" = 'trace' ]
 end
 
 set SUB_DIR "$argv[2]"
-set DIR "perf_data/l7/$CMD/$argv[2]"
+set DIR "perf_data/$POLICY_TYPE/$CMD/$argv[2]"
 set PID $PROXY_ID
 
 set RATE "$argv[-1]"
