@@ -41,7 +41,8 @@ if [ "$argv[1]" = 'stat' ]
 	else if string match -q -e 'ipmispredict' "$SUFFIX"
 		set FLAGS '-M' 'IpMispredict'
 	else if string match -q -e 'branch' "$SUFFIX"
-		set FLAGS '-e' 'branch-misses'
+		set FLAGS '-e' 'branch-instructions,branch-misses'
+		set STAT_FLAGS '-I' '10' '--interval-count' '1100' '-x' ','
 	else if string match -q -e 'llc' "$SUFFIX"					
 		set FLAGS '-e' 'offcore_response.all_requests.llc_hit.any_response,offcore_response.all_requests.llc_miss.any_response'		# check if machine support these events via 'perf list llc'
 	else if string match -q -e 'context' "$SUFFIX"

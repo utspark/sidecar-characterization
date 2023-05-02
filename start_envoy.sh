@@ -19,6 +19,7 @@ if [ "$NUM_CPUS" = "1" ]
 	set CPU_LIST "0"
 else
 	set CPU_LIST "1-$NUM_CPUS"
+	#set CPU_LIST "2,30"
 end
 
 echo "Setting CPU list for process $PROXY_ID to $CPU_LIST"

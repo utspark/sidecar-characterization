@@ -9,8 +9,8 @@ POLICIES=( [no_filter]=envoy-demo.yaml [rate_limit]=envoy-rate-limit.yaml
     [header_inspect]=envoy-header-inspect.yaml [routing]=envoy-routing.yaml
     [logging]=envoy-logging.yaml [http_inspect]=envoy-http-inspect.yaml [rbac_list]=envoy-rbac-reject-list.yaml
     [rbac_one]=envoy-rbac-reject-one.yaml [ip_filter]=envoy-l4-ip-filter.yaml)
-STATS=( '' mpki ipmispredict branch icache llc context )
-#STATS=( context )
+STATS=( '' mpki branch icache llc context ) #ipmispredict
+#STATS=( branch )
 REQ_RATES=( 3000 6000 9000 )
 
 #policy=$1
