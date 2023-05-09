@@ -10,7 +10,7 @@ set IP '0.0.0.0'
 set PORT '10000'
 
 set -l L7_POLICIES no_filter rate_limit ip_tagging both header_inspect routing logging
-set -l L4_POLICIES http_inspect rbac_list rbac_one ip_filter
+set -l L4_POLICIES http_inspect rbac_list rbac_one ip_filter tls
 
 if contains "$argv[2]" $L7_POLICIES
 	set POLICY_TYPE l7

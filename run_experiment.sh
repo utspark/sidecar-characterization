@@ -8,7 +8,8 @@ POLICIES=( [no_filter]=envoy-demo.yaml [rate_limit]=envoy-rate-limit.yaml
     [ip_tagging]=envoy-ip-tag.yaml #[both]=envoy-ip-rate.yaml 
     [header_inspect]=envoy-header-inspect.yaml [routing]=envoy-routing.yaml
     [logging]=envoy-logging.yaml [http_inspect]=envoy-http-inspect.yaml [rbac_list]=envoy-rbac-reject-list.yaml
-    [rbac_one]=envoy-rbac-reject-one.yaml [ip_filter]=envoy-l4-ip-filter.yaml)
+    [rbac_one]=envoy-rbac-reject-one.yaml [ip_filter]=envoy-l4-ip-filter.yaml
+    [tls]=envoy-tls.yaml )
 STATS=( '' mpki branch icache llc context ) #ipmispredict
 #STATS=( branch )
 REQ_RATES=( 3000 6000 9000 )
