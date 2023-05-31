@@ -2,14 +2,17 @@
 
 # arg1 is stat or record
 # arg2 is the policy applied
-# arg3 is the stat to be recorded (optional, default is instructions & cycles)
+# arg3 is the stat to be recorded
 # arg4 is request rate to envoy
+# arg5 is to add body of message or not (optional)
+# arg6 is length of body to add
 
 # 0.0.0.0:10000 is the default ip and port for standalone envoy
 set IP '0.0.0.0'
 set PORT '10000'
+set PROTOCOL 'http'
 
-set -l L7_POLICIES no_filter rate_limit ip_tagging both header_inspect routing logging
+set -l L7_POLICIES no_filter rate_limit ip_tagging both header_inspect routing logging lua
 set -l L4_POLICIES http_inspect rbac_list rbac_one ip_filter tls
 
 if contains "$argv[2]" $L7_POLICIES
@@ -18,14 +21,12 @@ else if contains "$argv[2]" $L4_POLICIES
 	set POLICY_TYPE l4
 else
 	echo "Policy not found"
-	set POLICY_TYPE unknown
+	exit
 end
-
 
 # Auto updates the envoy pid to be profiled
 # Manually set the PID if running with a service mash due to multiple envoy processes
 set PROXY_ID (ps -C "envoy" -o pid= | tail -1)
-# set PROXY_ID 2425181
 
 set SUFFIX "_$argv[3]"
 set EXT "data"
@@ -77,31 +78,31 @@ else if [ "$argv[1]" = 'trace' ]
 end
 
 set SUB_DIR "$argv[2]"
-set DIR "perf_data/$POLICY_TYPE/$CMD/$argv[2]"
+set DIR "perf_data/$POLICY_TYPE/$CMD/$SUB_DIR"
 set PID $PROXY_ID
 
-set RATE "$argv[-1]"
+set RATE "$argv[4]"
 set OUTPUT_FILE "$DIR"/"$RATE$SUFFIX"."$EXT"
+set LATENCY_FILE "$DIR"/latency_stats_"$RATE$SUFFIX"
+set LATENCY_SUFFIX ".txt"
+set WRK_FLAGS '-t1' '-c1' '-d12' "-R$RATE"
 
 echo "Starting requests to server with $RATE req/s"
 if [ "$argv[2]" = 'routing'  ]
-	wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT/route2" > "$DIR"/latency_stats_"$RATE$SUFFIX"_route2.txt &
+	wrk $WRK_FLAGS "http://$IP:$PORT/route2" > "$LATENCY_FILE"_route2.txt &
 else if [ "$argv[2]" = 'header_inspect' ]
-	wrk -t1 -c1 -d12 "-R$RATE" -s fault_header.lua "http://$IP:$PORT" > "$DIR"/latency_stats_"$RATE$SUFFIX"_header.txt &
+	wrk -$WRK_FLAGS -s fault_header.lua "http://$IP:$PORT" > "$LATENCY_FILE"_header.txt &
+else if [ "$argv[2]" = 'tls' ]
+	set PROTOCOL 'https'
+else if [ "$argv[2]" = 'lua' ]
+	if [ "$argv[5]" = 'body'  ]
+		set OUTPUT_FILE "$DIR"/"$RATE$SUFFIX"_body_$argv[6]."$EXT"
+		set WRK_FLAGS $WRK_FLAGS '-s' lua_body_"$argv[6]".lua
+		set LATENCY_SUFFIX _body_$argv[6].txt
+	end
 end
 
-wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT" > "$DIR"/latency_stats_"$RATE$SUFFIX".txt &
-
-# other wrk commands to send different requests to the echo server
-# below is for fault injection (envoy-header-inspect)
-# wrk -t1 -c1 -d12 "-R$RATE" -s header.lua "http://$IP:$PORT" > "$DIR"/latency_stats_"$RATE$SUFFIX_header".txt &
-
-# below is for routing (envoy-routing)
-# wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT/route2" > "$DIR"/latency_stats_"$RATE$SUFFIX_header".txt &
-
-# headers for echo server
-# wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT/?echo_header=wrk:0" > "$DIR"/latency_stats_"$RATE$SUFFIX_0".txt &
-# wrk -t1 -c1 -d12 "-R$RATE" "http://$IP:$PORT/?echo_header=wrk:1" > "$DIR"/latency_stats_"$RATE$SUFFIX_1".txt &
+wrk $WRK_FLAGS "$PROTOCOL://$IP:$PORT" > $LATENCY_FILE$LATENCY_SUFFIX &
 
 echo "Running 'perf $CMD $FLAGS' on process $PID, outputting to $OUTPUT_FILE..."
 echo "Press Ctrl+C to stop recording"
