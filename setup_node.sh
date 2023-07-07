@@ -29,6 +29,9 @@ echo "deb [arch=amd64 signed-by=/usr/share/keyrings/getenvoy-keyring.gpg] https:
 sudo apt update
 sudo apt install -y getenvoy-envoy
 
+#Install perf tools
+sudo apt install -y linux-tools-common linux-tools-generic linux-tools-$(uname -r) cpulimit
+
 docker compose up -d
 
 echo "Close shell and reopen to use docker commands without sudo"
