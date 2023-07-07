@@ -16,7 +16,7 @@ sudo apt-get install docker.io docker-compose-plugin # rerunning this line insta
 
 # Allow docker commands without sudo
 sudo usermod -aG docker $USER
-rm /etc/containerd/config.toml
+sudo rm /etc/containerd/config.toml
 sudo systemctl restart containerd
 
 # Install Envoy

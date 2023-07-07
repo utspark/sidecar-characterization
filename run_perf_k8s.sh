@@ -2,7 +2,13 @@
 
 rate=$1
 
-export PATH=$PATH:/home/prateek/workspace/research/servicemesh/pmu-tools/:/home/prateek/workspace/research/servicemesh/ol-wrk2/
+set -ex
+# Absolute path to this script, e.g. /home/user/bin/foo.sh
+SCRIPT=$(readlink -f "$0")
+# Absolute path this script is in, thus /home/user/bin
+SCRIPTDIR=$(dirname "$SCRIPT")
+
+export PATH=$PATH:$SCRIPTDIR/../pmu-tools/:$DCRIPTDIR/../wrk2-cornell/
 
 declare -A CORES
 CORES=( [1]=1 [2ht]=1,5 [2]=1,2 )
