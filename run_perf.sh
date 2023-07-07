@@ -3,28 +3,54 @@
 export PATH=$PATH:~/workspace/research/servicemesh/pmu-tools/:~/workspace/research/servicemesh/cl-wrk2/
 
 declare -A POLICIES
-POLICIES=( [default]=envoy-demo.yaml [iptag]=envoy-ip-tag.yaml [iptag5]=envoy-ip-tag5.yaml [iptag10]=envoy-ip-tag10.yaml )
+policy_prefix=envoy_filters/policies
+policy_files=$policy_prefix/*.yaml
+for file in ${policy_files[@]}
+do
+	IFS='/-.' read -ra tag <<< $file
+	POLICIES[${tag[3]}]=envoy-${tag[3]}.yaml
+done
 
-#stat=instructions,cycles
-#stat=l2_rqsts.all_demand_miss,LLC-load-misses,LLC-store-misses
-stat=cycle_activity.cycles_l2_miss,cycle_activity.stalls_l2_miss
-TS=$(date +%s)
+stat1=instructions,cycles,iTLB-load-misses,iTLB-loads,L1-icache-load-misses
+stat2=l2_rqsts.all_demand_miss,LLC-load-misses,LLC-store-misses
+stat3=L1MPKI
 
-DIR=expt_${TS}_${stat}
-mkdir $DIR
+DIR=perf_metrics
+mkdir -p $DIR
 for policy in "${!POLICIES[@]}"
 do
+	if [[ $policy == 'tls' ]]; then
+		continue
+	fi
+	mkdir -p $DIR/$policy
+
+	fcount=1
+	fname="$DIR/$policy/latency-1"
+	if test -f "$fname"; then
+		files=$DIR/$policy/latency*
+		for file in ${files[@]}
+		do
+			IFS='-' read -ra tag <<< $file
+			if (( ${tag[1]} >= $fcount )); then
+				fcount="$((${tag[1]}+1))"
+			fi
+		done
+	fi	
+
 	echo $policy
 	echo ${POLICIES[$policy]}
 	#start envoy
-	envoy -c ${POLICIES[$policy]} --concurrency 2 > /dev/null 2>&1 &
+	envoy -c $policy_prefix/${POLICIES[$policy]} --concurrency 2 > /dev/null 2>&1 &
 	sleep 2
 
 	PID=$(ps -C "envoy" -o pid= | tail -1)
+	IFS=' ' read -ra worker <<< $(ps -T -C envoy -o spid,comm | grep worker_0)
+	WTID=${worker[0]}
+	sudo taskset -pc 1 $PID
 
-	wrk --latency -t1 -d11s -R10000 'http://0.0.0.0:10000' > $DIR/${policy}_latency &
-	sudo perf record -e $stat -p $PID -g -o $DIR/${policy}_record -- sleep 10
-	#toplev.py -v --no-desc -l1 -I 1000 --thread -p $PID sleep 10 2> $DIR/${policy}_toplev
+	wrk --latency -t1 -d12s -R1000 'http://0.0.0.0:10000' > $DIR/${policy}/latency-$fcount &
+	sudo perf record -C 1 -e $stat1 -t $WTID -g -o $DIR/${policy}/${stat}_record-$fcount -- sleep 5
+	toplev.py -v --no-desc -l1 -I 1000 --thread -p $PID sleep 5 2> $DIR/${policy}/toplev-$fcount
 
 	sudo kill $PID
 	sleep 3

@@ -14,13 +14,39 @@ static_resources:
           stat_prefix: ingress_http
           generate_request_id: false
           http_filters:
-          - name: envoy.filters.http.fault
+          - name: envoy.filters.http.local_ratelimit
             typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
-              abort:
-                http_status: 404
-                percentage:
-                  numerator: 100
+              "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+              type_url: type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+              value:
+                stat_prefix: http_local_rate_limiter
+                token_bucket:
+                  max_tokens: 6000
+                  tokens_per_fill: 6000
+                  fill_interval: 1s
+                filter_enabled:
+                  runtime_key: local_rate_limit_enabled
+                  default_value:
+                    numerator: 100
+                    denominator: HUNDRED
+                filter_enforced:
+                  runtime_key: local_rate_limit_enforced
+                  default_value:
+                    numerator: 100
+                    denominator: HUNDRED
+                response_headers_to_add:
+                  - append: false
+                    header:
+                      key: x-local-rate-limit
+                      value: 'true'
+          - name: envoy.filters.http.ip_tagging
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.ip_tagging.v3.IPTagging
+              request_type: BOTH
+              ip_tags:
+              - ip_tag_name: tagged_by_envoy
+                ip_list: 
+                - address_prefix: 0.0.0.0
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -36,7 +62,6 @@ static_resources:
                   prefix: "/"
                 route:
                   cluster: service_envoyproxy_io
-
 
   clusters:
   - name: service_envoyproxy_io

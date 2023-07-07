@@ -14,21 +14,21 @@ static_resources:
           stat_prefix: ingress_http
           generate_request_id: false
           http_filters:
-          - name: envoy.filters.http.ip_tagging
+          - name: envoy.filters.http.header_to_metadata
             typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.ip_tagging.v3.IPTagging
-              request_type: BOTH
-              ip_tags:
-              - ip_tag_name: tagged_by_envoy
-                ip_list: 
-                - address_prefix: 0.0.0.0
-          - name: envoy.filters.http.fault
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
-              abort:
-                http_status: 404
-                percentage:
-                  numerator: 100
+              "@type": type.googleapis.com/envoy.extensions.filters.http.header_to_metadata.v3.Config
+              request_rules:
+              - header: x-version
+                on_header_present:
+                  metadata_namespace: envoy.lb
+                  key: version
+                  type: STRING
+                on_header_missing:
+                  metadata_namespace: envoy.lb
+                  key: default
+                  value: "true"
+                  type: STRING
+                remove: false
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -52,6 +52,14 @@ static_resources:
     type: STATIC
     # Comment out the following line to test on v6 networks
     dns_lookup_family: V4_ONLY
+    lb_policy: ROUND_ROBIN
+    lb_subset_config:
+      fallback_policy: ANY_ENDPOINT
+      subset_selectors:
+      - keys:
+        - default
+      - keys:
+        - version
     load_assignment:
       cluster_name: service_envoyproxy_io
       endpoints:
