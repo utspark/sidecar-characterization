@@ -1,11 +1,11 @@
 #!/bin/bash
-set -ex
+#set -ex
 # Absolute path to this script, e.g. /home/user/bin/foo.sh
 SCRIPT=$(readlink -f "$0")
 # Absolute path this script is in, thus /home/user/bin
 SCRIPTDIR=$(dirname "$SCRIPT")
 
-export PATH=$PATH:$SCRIPTDIR/../pmu-tools/:$DCRIPTDIR/../wrk2/
+export PATH=$PATH:$SCRIPTDIR/../pmu-tools/:$SCRIPTDIR/../wrk2/
 
 declare -A POLICIES
 policy_prefix=envoy_filters/policies
