@@ -11,6 +11,7 @@ static_resources:
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
           stat_prefix: l4_rbac
+          enforcement_type: CONTINUOUS
           rules:
             action: DENY
             policies:
