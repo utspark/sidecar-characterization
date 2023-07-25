@@ -5,7 +5,7 @@ SCRIPT=$(readlink -f "$0")
 # Absolute path this script is in, thus /home/user/bin
 SCRIPTDIR=$(dirname "$SCRIPT")
 
-export PATH=$PATH:$SCRIPTDIR/../pmu-tools/:$SCRIPTDIR/../wrk2/
+export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../wrk2/
 
 declare -A POLICIES
 policy_prefix=envoy_filters/policies
