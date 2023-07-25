@@ -1,0 +1,27 @@
+              - ip_tag_name: tagged_by_envoy_0
+                ip_list:
+                - address_prefix: 0.0.0.0
+              - ip_tag_name: tagged_by_envoy_1
+                ip_list:
+                - address_prefix: 0.0.0.0
+              - ip_tag_name: tagged_by_envoy_2
+                ip_list:
+                - address_prefix: 0.0.0.0
+              - ip_tag_name: tagged_by_envoy_100
+                ip_list:
+                - address_prefix: 0.0.0.0
+              - ip_tag_name: tagged_by_envoy_101
+                ip_list:
+                - address_prefix: 0.0.0.0
+              - ip_tag_name: tagged_by_envoy_102
+                ip_list:
+                - address_prefix: 0.0.0.0
+              - ip_tag_name: tagged_by_envoy_200
+                ip_list:
+                - address_prefix: 0.0.0.0
+              - ip_tag_name: tagged_by_envoy_201
+                ip_list:
+                - address_prefix: 0.0.0.0
+              - ip_tag_name: tagged_by_envoy_202
+                ip_list:
+                - address_prefix: 0.0.0.0

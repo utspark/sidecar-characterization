@@ -16,7 +16,81 @@ static_resources:
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
           stat_prefix: ingress_http
+          access_log:
+          - name: envoy.access_loggers.stdout
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
           http_filters:
+          - name: envoy.filters.http.geoip
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.geoip.v3.Geoip
+              use_xff: true
+              xff_num_trusted_hops: 1
+              geo_headers_to_add:
+                country: "x-geo-country"
+                region: "x-geo-region"
+              provider:
+                name: "envoy.geoip_providers.maxmind"
+          - name: envoy.filters.http.ip_tagging
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.ip_tagging.v3.IPTagging
+              request_type: BOTH
+              ip_tags:
+              - ip_tag_name: tagged_by_envoy_0
+                ip_list:
+                - address_prefix: 0.0.0.0
+              - ip_tag_name: tagged_by_envoy_1
+                ip_list:
+                - address_prefix: 0.0.0.0
+              - ip_tag_name: tagged_by_envoy_2
+                ip_list:
+                - address_prefix: 0.0.0.0
+              - ip_tag_name: tagged_by_envoy_100
+                ip_list:
+                - address_prefix: 0.0.0.0
+              - ip_tag_name: tagged_by_envoy_101
+                ip_list:
+                - address_prefix: 0.0.0.0
+          - name: envoy.filters.http.local_ratelimit
+            typed_config:
+              "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+              type_url: type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+              value:
+                stat_prefix: http_local_rate_limiter
+                token_bucket:
+                  max_tokens: 1000
+                  tokens_per_fill: 1000
+                  fill_interval: 1s
+                filter_enabled:
+                  runtime_key: local_rate_limit_enabled
+                  default_value:
+                    numerator: 100
+                    denominator: HUNDRED
+                filter_enforced:
+                  runtime_key: local_rate_limit_enforced
+                  default_value:
+                    numerator: 100
+                    denominator: HUNDRED
+                response_headers_to_add:
+                  - append: false
+                    header:
+                      key: x-local-rate-limit
+                      value: 'true'
+          - name: envoy.filters.http.header_to_metadata
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.header_to_metadata.v3.Config
+              request_rules:
+              - header: x-version
+                on_header_present:
+                  metadata_namespace: envoy.lb
+                  key: version
+                  type: STRING
+                on_header_missing:
+                  metadata_namespace: envoy.lb
+                  key: default
+                  value: "true"
+                  type: STRING
+                remove: false
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

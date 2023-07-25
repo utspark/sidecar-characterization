@@ -4,7 +4,8 @@ OS=$(lsb_release -cs)
 
 # Install Docker
 sudo apt-get update
-sudo apt-get install -y ca-certificates apt-transport-https gnupg2 curl lsb-release
+sudo apt-get install -y ca-certificates apt-transport-https gnupg2 curl lsb-release luarocks
+sudo luarocks install luasocket
 sudo mkdir -m 0755 -p /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 echo "deb [arch="$ARCH" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
@@ -34,6 +35,6 @@ sudo apt install -y linux-tools-common linux-tools-generic linux-tools-$(uname -
 echo -1 | sudo tee /proc/sys/kernel/perf_event_paranoid
 echo 0 | sudo tee /proc/sys/kernel/nmi_watchdog
 
-docker compose up -d
+sudo docker compose up -d
 
 echo "Close shell and reopen to use docker commands without sudo"

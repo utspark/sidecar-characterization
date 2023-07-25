@@ -4,10 +4,7 @@ sudo swapoff -a
 ARCH=$(dpkg --print-architecture)
 OS=$(lsb_release -cs)
 sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/apt-key.gpg
-echo "deb [arch=$ARCH signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  $OS stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/apt-key.gpg] https://apt.kubernetes.io/ \
   kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list > /dev/null
 
@@ -34,13 +31,7 @@ curl https://raw.githubusercontent.com/projectcalico/calico/v3.25.1/manifests/ca
 # Edit CIDR/Subnet, IP_AUTODETECT if calico fails
 kubectl apply -f calico.yaml
 
-#Install Istio
-curl -L https://istio.io/downloadIstio | sh -
-#cd istio-1.16.1/
-cd istio-*/
-bin/istioctl install --set profile=demo -y
-cd ..
-kubectl label namespace default istio-injection=enabled
-
 # Join using the following output
 sudo kubeadm token create --print-join-command
+node=$(kubectl get nodes | awk 'FNR==2{split($0,a); print a[1]}')
+kubectl taint nodes $node node-role.kubernetes.io/control-plane-
