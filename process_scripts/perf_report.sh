@@ -33,7 +33,7 @@ do
 				continue
 			fi
 			echo $rec
-			sudo perf report -i $rec > perf_report_$rec
+			sudo perf report -i $rec -f > perf_report_$rec
 		done
 	fi
 	cd -

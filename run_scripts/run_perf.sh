@@ -8,12 +8,12 @@ SCRIPTDIR=$(dirname "$SCRIPT")
 export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../wrk2/
 
 declare -A POLICIES
-policy_prefix=envoy_filters/policies
+policy_prefix=../envoy_filters/policies
 policy_files=$policy_prefix/*.yaml
 for file in ${policy_files[@]}
 do
 	IFS='/-.' read -ra tag <<< $file
-	POLICIES[${tag[3]}]=envoy-${tag[3]}.yaml
+	POLICIES[${tag[6]}]=envoy-${tag[6]}.yaml
 done
 
 declare -A stat
@@ -33,6 +33,7 @@ URL="0.0.0.0:10000"
 #URL="127.0.0.1:32080"
 CURL="curl -sl 0.0.0.0:10000 --header \"Content-Type: application/json\""
 
+#POLICIES['http_mix']=envoy-http_mix.yaml
 DIR=$1
 mkdir -p $DIR
 for policy in "${!POLICIES[@]}"
@@ -72,16 +73,34 @@ do
 	for s in "${stat[@]}"
 	do
 		sudo perf record -C 1 -e $s -t $WTID -g -o $DIR/${policy}/${s}_record-$fcount -- sleep 10 &
+		sleep 2
 		taskset -c 3 wrk --latency -t1 -d5s -R100 "http://$URL/param?query=demo" > $DIR/${policy}/latency_r_${s}_$fcount 
 		
-		sleep 7
+		sleep 5
 
 		sudo perf stat -C 1 -I 100 -e $s -t $WTID -o $DIR/${policy}/${s}_stat-$fcount -- sleep 10 &
+		sleep 2
 		taskset -c 3 wrk --latency -t1 -d5s -R100 "http://$URL/param?query=demo" > $DIR/${policy}/latency_s_${s}_$fcount
-		sleep 7
+		sleep 5
 	done
 	#toplev.py -v --no-desc -l1 -I 1000 --thread -p $PID sleep 5 2> $DIR/${policy}/toplev-$fcount
 
 	sudo kill $PID
 	sleep 3
 done
+
+for policy in "${!POLICIES[@]}"
+do
+	cd $DIR/$policy
+	recs=instructions*_record*
+	for rec in ${recs[@]}
+	do
+		if [[ -f perf_report_$rec ]]; then
+			continue
+		fi
+		echo $rec
+		sudo perf report -i $rec -f > perf_report_$rec
+	done
+done
+
+sudo chown -R (id -u):(id -g) $DIR

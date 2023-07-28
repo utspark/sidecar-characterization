@@ -11,19 +11,20 @@ SCRIPT=$(readlink -f "$0")
 # Absolute path this script is in, thus /home/user/bin
 SCRIPTDIR=$(dirname "$SCRIPT")
 
-export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../wrk2/
+if [ -z $WRK ]; then
+	export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../wrk2/
+fi
 
 DIR=$1
 APP=$2
-MAX_RATE=$(($3*1))
-STEP=$(($4*1))
+MAX_RATE=$3
+STEP=$4
 NUM=$(( $MAX_RATE/$STEP ))
 mkdir -p $DIR/$APP
 for (( i=1; i<=$NUM; i++))
 #for i in {1..$MAX_RATE..$STEP}
 do
 	rate=$(( $i*$STEP ))
-	echo $rate
 	#taskset -c 2,3 wrk --latency -t2 -c2 -d30s -s ./mixed-workload_type_1.lua -R$rate 'http://127.0.0.1:32080' > $DIR/${2}/latency_$rate
-	taskset -c 2 wrk --latency -t2 -d30s -R$rate 'http://127.0.0.1:32080' > $DIR/$APP/latency_$i
+	taskset -c 2,4 wrk --latency -t2 -d30s -R$rate 'http://127.0.0.1:32080' > $DIR/$APP/latency_$rate
 done

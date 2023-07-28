@@ -5,6 +5,7 @@ import glob
 import fnmatch
 import re
 import pickle
+from datetime import datetime
 
 fun = [
         ("read",".] Envoy::Network::ConnectionImpl::onReadReady$"),
@@ -45,8 +46,9 @@ def save(total, val, func, metric, data):
     return data
 
 
-output_dir=sys.argv[1]
-pwd= os.getcwd()
+dt = datetime.now().strftime("%m%d")
+output_dir=sys.argv[1]+'_'+dt
+pwd = os.getcwd()
 os.chdir(output_dir)
 dirs = [d for d in os.listdir(".") if os.path.isdir(d)]
 all_data = {}
@@ -81,8 +83,8 @@ for directory in dirs:
     all_data.update({directory:data})
     os.chdir("..")
 
-os.chdir(pwd)
-with open('perf_all_stats_0724.pkl', 'wb') as handle:
+#os.chdir(pwd)
+with open('perf_all_stats_'+dt+'.pkl', 'wb') as handle:
     pickle.dump(all_data, handle)
 
 #print(all_data)

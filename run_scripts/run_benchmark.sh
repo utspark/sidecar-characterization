@@ -10,8 +10,34 @@
 SCRIPT=$(readlink -f "$0")
 # Absolute path this script is in, thus /home/user/bin
 SCRIPTDIR=$(dirname "$SCRIPT")
+WRK=wrk2
+PROFILES=('default' 'demo' 'minimal')
+while getopts 'op:h' opt; do
+	case "$opt" in
+		o)
+			echo "Using open-loop load generator"
+			WRK=wrk2-cornell
+			;;
+		p)
+			arg="$OPTARG"
+			echo "Setting Istio install profile as '${OPTARG}'"
+			PROFILES=($arg)
+			;;
+		h)
+			echo "Usage: $(basename $0) [OPTION]"
+			echo "	     -o          Use open-loop wrk2 load generator)"
+		       	echo "	     -p=PROFILE  Istio Installation Profile"
+			exit 0
+			;;
+		*)
+			echo "Usage: $(basename $0) [-o ] [-p <profile>]"
+			echo "No options provided. Defaulting to closed loop generator for all profiles of Istio"
+			;;
+	esac
+done
+shift "$(($OPTIND -1))"
 
-export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../wrk2/
+export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../$WRK/
 
 function wait {
 	all_ready=0
@@ -44,7 +70,6 @@ function load_gen {
 }
 
 APP_DIR=$SCRIPTDIR/../benchmark_apps
-#declare -A apps
 declare -A paths
 declare -A cmds
 declare -A maxrate
@@ -58,15 +83,28 @@ step=(["bookinfo"]="50" ["hotelreservation"]="1" ["onlineboutique"]="2")
 istio_modes=(["proxy"]="=enabled" ["noproxy"]="-")
 
 
-for app in "${apps[@]}"
+dt=$(date '+$m%d')
+for profile in "${PROFILES[@]}"
 do
-	for mode in "${!istio_modes[@]}"
+	../setup_scripts/setup_istio.sh -d ~/ -p $profile
+	for app in "${apps[@]}"
 	do
-		kubectl label namespace default istio-injection${istio_modes[$mode]}
-		kubectl apply ${cmds[$app]} $APP_DIR/${paths[$app]}
-		wait
-		kubectl get po
-		load_gen latency_$mode $app $maxrate[$app] $step[$app]
-		kubectl delete ${cmds[$app]} $APP_DIR/${paths[$app]}
+		for mode in "${!istio_modes[@]}"
+		do
+			kubectl label namespace default istio-injection${istio_modes[$mode]}
+			kubectl apply ${cmds[$app]} $APP_DIR/${paths[$app]}
+			wait
+			kubectl get po
+			. ./load_gen.sh latency_$mode $app $maxrate[$app] $step[$app]
+			kubectl delete ${cmds[$app]} $APP_DIR/${paths[$app]}
+		done
 	done
+	../setup_scripts/setup_istio.sh -d ~/ -c
+	sleep 5
+	output_dir=~/benchmark_latency$dt/$profile
+	mkdir -p $output_dir
+	mv latency* $output_dir
 done
+
+rm -rf ~/istio*
+

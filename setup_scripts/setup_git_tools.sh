@@ -14,7 +14,7 @@ sudo cp toplev /usr/local/bin
 cd ..
 
 # Get benchmark applications
-mkdir ../../benchmark_apps/
+mkdir -p ../../benchmark_apps/
 cd ../../benchmark_apps
 git clone https://github.com/GoogleCloudPlatform/microservices-demo.git OnlineBoutique
 git clone https://github.com/delimitrou/DeathStarBench.git
