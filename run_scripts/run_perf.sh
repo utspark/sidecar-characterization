@@ -34,6 +34,10 @@ URL="0.0.0.0:10000"
 CURL="curl -sl 0.0.0.0:10000 --header \"Content-Type: application/json\""
 
 #POLICIES['http_mix']=envoy-http_mix.yaml
+
+# Start application containers
+docker compose up -d
+
 DIR=$1
 mkdir -p $DIR
 for policy in "${!POLICIES[@]}"
@@ -89,6 +93,10 @@ do
 	sleep 3
 done
 
+#Stop all running containers
+docker compose stop
+
+# Process perf record
 for policy in "${!POLICIES[@]}"
 do
 	cd $DIR/$policy
