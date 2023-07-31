@@ -36,9 +36,10 @@ CURL="curl -sl 0.0.0.0:10000 --header \"Content-Type: application/json\""
 #POLICIES['http_mix']=envoy-http_mix.yaml
 
 # Start application containers
-docker compose up -d
+docker compose -f run_scripts/docker-compose.yml up -d
 
-DIR=$1
+dt=$(date '+%m%d')
+DIR=$1_$dt
 mkdir -p $DIR
 for policy in "${!POLICIES[@]}"
 do
@@ -111,4 +112,4 @@ do
 	done
 done
 
-sudo chown -R (id -u):(id -g) $DIR
+sudo chown -R $(id -u):$(id -g) $DIR
