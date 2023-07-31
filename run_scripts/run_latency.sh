@@ -15,16 +15,19 @@ if [ -z $WRK ]; then
 	export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../wrk2/
 fi
 
+echo "running wrk load test"	
 DIR=$1
 APP=$2
 MAX_RATE=$3
-STEP=$4
+STEP=$4 
 NUM=$(( $MAX_RATE/$STEP ))
+URL=$5
 mkdir -p $DIR/$APP
-for (( i=1; i<=$NUM; i++))
-#for i in {1..$MAX_RATE..$STEP}
+
+for (( i=1; i<=$NUM; i++ ))
 do
 	rate=$(( $i*$STEP ))
-	#taskset -c 2,3 wrk --latency -t2 -c2 -d30s -s ./mixed-workload_type_1.lua -R$rate 'http://127.0.0.1:32080' > $DIR/${2}/latency_$rate
-	taskset -c 2,4 wrk --latency -t2 -d30s -R$rate 'http://127.0.0.1:32080' > $DIR/$APP/latency_$rate
+	#taskset -c 2,3 wrk -L -t2 -c2 -d30s -s ./mixed-workload_type_1.lua -R$rate 'http://127.0.0.1:32080' > $DIR/${2}/latency_$rate
+	taskset -c 2,4 wrk -L -t2 -d120s -R$rate "http://127.0.0.1:32080$URL" > $DIR/$APP/latency_$rate
+	sleep 10
 done

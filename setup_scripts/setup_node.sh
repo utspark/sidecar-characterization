@@ -35,6 +35,6 @@ sudo apt install -y linux-tools-common linux-tools-generic linux-tools-$(uname -
 echo -1 | sudo tee /proc/sys/kernel/perf_event_paranoid
 echo 0 | sudo tee /proc/sys/kernel/nmi_watchdog
 
-setup_dvfs.sh
+./setup_scripts/setup_dvfs.sh
 
 echo "Close shell and reopen to use docker commands without sudo"

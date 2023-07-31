@@ -46,7 +46,7 @@ cd $DIR
 cd istio-$ISTIO_VERSION
 if [[ $CLEAN == 1 ]]; then
 	bin/istioctl uninstall --purge
-else:
+else
 	bin/istioctl install --set profile=$PROFILE -y
 	echo "To enable proxy injection: kubectl label namespace default istio-injection=enabled"
 fi

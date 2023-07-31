@@ -8,12 +8,12 @@ SCRIPTDIR=$(dirname "$SCRIPT")
 export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../wrk2/
 
 declare -A POLICIES
-policy_prefix=../envoy_filters/policies
+policy_prefix=envoy_filters/policies
 policy_files=$policy_prefix/*.yaml
 for file in ${policy_files[@]}
 do
 	IFS='/-.' read -ra tag <<< $file
-	POLICIES[${tag[6]}]=envoy-${tag[6]}.yaml
+	POLICIES[${tag[3]}]=envoy-${tag[3]}.yaml
 done
 
 declare -A stat
@@ -63,8 +63,8 @@ do
 		done
 	fi	
 
-	#echo $policy
-	#echo ${POLICIES[$policy]}
+	echo $policy
+	echo ${POLICIES[$policy]}
 	#start envoy
 	envoy -c $policy_prefix/${POLICIES[$policy]} --concurrency 1 > /dev/null 2>&1 &
 	sleep 2
