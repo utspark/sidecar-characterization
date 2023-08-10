@@ -5,6 +5,7 @@ if [[ $1 == "clean" ]]; then
 	rm calico.yaml
 else
 	sudo swapoff -a
+	sudo systemctl stop firewalld
 	ARCH=$(dpkg --print-architecture)
 	OS=$(lsb_release -cs)
 	sudo mkdir -p /etc/apt/keyrings
@@ -17,13 +18,8 @@ else
 	# echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 	
 	sudo apt-get update
-	sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
-	sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+	sudo apt-get install -y gnupg-agent software-properties-common
 	sudo apt-get install -y kubelet kubeadm kubectl
-	
-	sudo usermod -aG docker $USER
-	rm /etc/containerd/config.toml
-	sudo systemctl restart containerd
 	
 	sudo kubeadm init
 	mkdir -p $HOME/.kube

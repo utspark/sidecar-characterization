@@ -1,6 +1,8 @@
 #!/bin/bash
 
-DIR=../../benchmark_apps/
+SCRIPT=$(readlink -f "$0")
+SCRIPTDIR=$(dirname "$SCRIPT")
+DIR=$SCRIPTDIR/../../benchmark_apps/
 PROFILE=demo
 CLEAN=0
 while getopts 'cd:p:h' opt; do
@@ -45,10 +47,12 @@ cd $DIR
 [ ! -d istio-$ISTIO_VERSION ] && curl -L https://istio.io/downloadIstio | sh -
 cd istio-$ISTIO_VERSION
 if [[ $CLEAN == 1 ]]; then
+	kubectl delete -f $SCRIPTDIR/disable-tls.yaml
 	bin/istioctl uninstall --purge
 else
 	bin/istioctl install --set profile=$PROFILE -y
 	echo "To enable proxy injection: kubectl label namespace default istio-injection=enabled"
+	kubectl apply -f $SCRIPTDIR/disable-tls.yaml
 fi
 cd -
 

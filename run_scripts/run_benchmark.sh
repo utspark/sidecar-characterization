@@ -12,11 +12,17 @@ SCRIPT=$(readlink -f "$0")
 SCRIPTDIR=$(dirname "$SCRIPT")
 WRK=wrk2
 PROFILES=('default' 'demo' 'minimal')
-while getopts 'cp:h' opt; do
+APPS=("bookinfo" "hotelreservation" "onlineboutique")
+while getopts 'a:cp:h' opt; do
 	case "$opt" in
 		c)
 			echo "Using closed-loop load generator"
 			WRK=wrk2-cornell
+			;;
+		a)
+			arg="$OPTARG"
+			echo "Running experiment for app '${OPTARG}' only"
+			APPS=($arg)
 			;;
 		p)
 			arg="$OPTARG"
@@ -75,29 +81,32 @@ function load_gen {
 }
 
 APP_DIR=$SCRIPTDIR/../../benchmark_apps
-#declare -A apps
 declare -A paths
 declare -A cmds
 declare -A maxrate
 declare -A step
 declare -A istio_modes
-apps=("bookinfo" "hotelreservation" "onlineboutique")
 paths=(["bookinfo"]="istio-1.18.1/samples/bookinfo/platform/kube/bookinfo.yaml" ["hotelreservation"]="DeathStarBench/hotelReservation/kubernetes" ["onlineboutique"]="OnlineBoutique/release/kubernetes-manifests.yaml")
 cmds=(["bookinfo"]="-f" ["hotelreservation"]="-Rf" ["onlineboutique"]="-f")
 maxrate=(["bookinfo"]="300" ["hotelreservation"]="250" ["onlineboutique"]="40")
 step=(["bookinfo"]="50" ["hotelreservation"]="50" ["onlineboutique"]="10")
 url=(["bookinfo"]="/" ["hotelreservation"]="/hotels?inDate=2015-04-09&outDate=2015-04-10&lat=37.7749&lon=-122.4194" ["onlineboutique"]="/")
-istio_modes=(["proxy"]="=enabled" ["noproxy"]="-")
+istio_modes=(["proxy"]="=enabled")
+#istio_modes=(["proxy"]="=enabled" ["noproxy"]="-")
 
 
 dt=$(date '+%m%d')
+OUTPATH=~/benchmark_latency${dt}_$SYSCALL
 for profile in "${PROFILES[@]}"
 do
 	setup_scripts/setup_istio.sh -d ~/ -p $profile
 	for mode in "${!istio_modes[@]}"
 	do
+		if [[ $mode == 'noproxy' ]];then
+			unset SYSCALL
+		fi
 		kubectl label namespace default istio-injection${istio_modes[$mode]}
-		for app in "${apps[@]}"
+		for app in "${APPS[@]}"
 		do
 			kubectl apply ${cmds[$app]} $APP_DIR/${paths[$app]}
 			wait
@@ -108,10 +117,10 @@ do
 	done
 	echo "y" | setup_scripts/setup_istio.sh -d ~/ -c
 	sleep 5
-	output_dir=~/benchmark_latency$dt/$profile
+	output_dir=$OUTPATH/$profile
 	mkdir -p $output_dir
 	mv latency* $output_dir
 done
-
+cp -r $OUTPATH .
 rm -rf ~/istio*
 
