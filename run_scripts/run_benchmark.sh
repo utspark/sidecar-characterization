@@ -91,8 +91,7 @@ cmds=(["bookinfo"]="-f" ["hotelreservation"]="-Rf" ["onlineboutique"]="-f")
 maxrate=(["bookinfo"]="300" ["hotelreservation"]="250" ["onlineboutique"]="40")
 step=(["bookinfo"]="50" ["hotelreservation"]="50" ["onlineboutique"]="10")
 url=(["bookinfo"]="/" ["hotelreservation"]="/hotels?inDate=2015-04-09&outDate=2015-04-10&lat=37.7749&lon=-122.4194" ["onlineboutique"]="/")
-istio_modes=(["proxy"]="=enabled")
-#istio_modes=(["proxy"]="=enabled" ["noproxy"]="-")
+istio_modes=(["proxy"]="=enabled" ["noproxy"]="-")
 
 
 dt=$(date '+%m%d')
