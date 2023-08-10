@@ -48,7 +48,7 @@ cd $DIR
 cd istio-$ISTIO_VERSION
 if [[ $CLEAN == 1 ]]; then
 	kubectl delete -f $SCRIPTDIR/disable-tls.yaml
-	bin/istioctl uninstall --purge
+	bin/istioctl uninstall --purge -y
 else
 	bin/istioctl install --set profile=$PROFILE -y
 	echo "To enable proxy injection: kubectl label namespace default istio-injection=enabled"
