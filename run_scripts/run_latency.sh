@@ -27,22 +27,27 @@ DIR=$1
 APP=$2
 MAX_RATE=$3
 STEP=$4 
-NUM=$(( $MAX_RATE/$STEP ))
 URL=$5
+MIN_RATE=$6
+RANGE=$(( $MAX_RATE-$MIN_RATE ))
+NUM=$(( $RANGE/$STEP ))
 mkdir -p $DIR/$APP
 
 for (( i=1; i<=$NUM; i++ ))
 do
 	if [ ! -z $SYSCALL ]; then
-		sudo strace -T -tt -e trace=writev,readv,sendto,recvfrom -o trace_output -ff -p $pids &
-		#sudo strace -T -tt -o trace_output -ff -p $pids &
+		#sudo strace -T -tt -e trace=writev,readv,sendto,recvfrom -o trace_output -ff -p $pids &
+		sudo strace -T -tt -o trace_output -ff -p $pids &
 		sleep 1
 		SPID=$!
 	fi
-	rate=$(( $i*$STEP ))
+	rate=$(( $i*$STEP+$MIN_RATE ))
 	#taskset -c 2,3 wrk -L -t2 -c2 -d30s -s ./mixed-workload_type_1.lua -R$rate 'http://127.0.0.1:32080' > $DIR/${2}/latency_$rate
-	taskset -c 2,4 wrk -L -t2 -d120s -R$rate "http://127.0.0.1:32080$URL" > $DIR/$APP/latency_$rate
-	sleep 2
+	./run_scripts/run_metrics.sh $DIR/$APP $rate &
+	set -x
+	taskset -c 2,4 wrk -L -t1 -d60s -c2 -R$rate "http://127.0.0.1:32080$URL" > $DIR/$APP/latency_$rate
+	set +x
+	sleep 12
 	if [ ! -z $SYSCALL ]; then
 		sudo pkill -P $SPID
 		sleep 2
