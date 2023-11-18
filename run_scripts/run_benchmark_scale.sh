@@ -11,7 +11,7 @@ SCRIPT=$(readlink -f "$0")
 # Absolute path this script is in, thus /home/user/bin
 SCRIPTDIR=$(dirname "$SCRIPT")
 WRK=wrk2
-PROFILES=('default' 'demo' 'minimal')
+PROFILES=('noproxy' 'default' 'demo' 'minimal')
 APPS=("bookinfo" "hotelreservation" "onlineboutique")
 while getopts 'a:cp:h' opt; do
 	case "$opt" in
@@ -62,21 +62,21 @@ function wait {
 	done
 }
 
-function load_gen {
-	echo "running wrk load test"	
-	DIR=$1
-	APP=$2
-	MAX_RATE=$3
-	STEP=$4 
-	NUM=$(( $MAX_RATE/$STEP ))
-	URL=$5
-	mkdir -p $DIR/$APP
-	
-	for (( i=1; i<=$NUM; i++ ))
+function scale {
+	factor=$1
+	echo $factor
+	#deployments=($(kubectl get deployments -o json | jq '.items[].metadata.name'))
+	deployments=($(kubectl get deployments -o=custom-columns='NAME:.metadata.name' | tail -n +2))
+	echo ${deployments[@]}
+	for dep in "${deployments[@]}"
 	do
-		rate=$(( $i*$STEP ))
-		#taskset -c 2,3 wrk --latency -t2 -c2 -d30s -s ./mixed-workload_type_1.lua -R$rate 'http://127.0.0.1:32080' > $DIR/${2}/latency_$rate
-		taskset -c 2,4 wrk --latency -t2 -d120s -R$rate "http://127.0.0.1:32080$URL" > $DIR/$APP/latency_$rate
+		if [[ $dep == *"memcached"* ]]; then
+			kubectl scale deployment $dep --replicas=1
+		elif [[ $dep == *"mongo"* ]]; then
+			kubectl scale deployment $dep --replicas=1
+		else
+			kubectl scale deployment $dep --replicas=$factor
+		fi
 	done
 }
 
@@ -84,45 +84,58 @@ APP_DIR=$SCRIPTDIR/../../benchmark_apps
 declare -A paths
 declare -A cmds
 declare -A maxrate
+declare -A minrate
+declare -A scaling
 declare -A step
-declare -A url
 declare -A istio_modes
+declare -A url
 paths=(["bookinfo"]="istio-1.18.1/samples/bookinfo/platform/kube/bookinfo.yaml" ["hotelreservation"]="DeathStarBench/hotelReservation/kubernetes" ["onlineboutique"]="OnlineBoutique/release/kubernetes-manifests.yaml")
 cmds=(["bookinfo"]="-f" ["hotelreservation"]="-Rf" ["onlineboutique"]="-f")
-maxrate=(["bookinfo"]="90" ["hotelreservation"]="300" ["onlineboutique"]="25")
-step=(["bookinfo"]="15" ["hotelreservation"]="50" ["onlineboutique"]="2")
+minrate=(["bookinfo"]="0" ["hotelreservation"]="0" ["onlineboutique"]="0")
+maxrate=(["bookinfo"]="500" ["hotelreservation"]="800" ["onlineboutique"]="150")
+scaling=(["bookinfo"]="5" ["hotelreservation"]="5" ["onlineboutique"]="5")
+step=(["bookinfo"]="25" ["hotelreservation"]="40" ["onlineboutique"]="10")
 url=(["bookinfo"]="/productpage" ["hotelreservation"]="/hotels?inDate=2015-04-09\&outDate=2015-04-10\&lat=37.7749\&lon=-122.4194" ["onlineboutique"]="/")
 istio_modes=(["proxy"]="=enabled" ["noproxy"]="-")
 #istio_modes=(["proxy"]="=enabled")
+#istio_modes=(["noproxy"]="-")
 
 
+scale_factor=$(kubectl get nodes | tail -n +2 | wc -l)
 dt=$(date '+%m%d')
-OUTPATH=~/benchmark_latency${dt}_$SYSCALL
+OUTPATH=~/benchmark_latency_${scale_factor}_${dt}_$SYSCALL
 for profile in "${PROFILES[@]}"
 do
-	setup_scripts/setup_istio.sh -d ~/ -p $profile
-	for mode in "${!istio_modes[@]}"
+#setup_scripts/setup_istio.sh -d ~/ -p demo
+#for mode in "${!istio_modes[@]}"
+#do
+	if [[ $profile == 'noproxy' ]];then
+		unset SYSCALL
+		mode=$profile
+	else
+		setup_scripts/setup_istio.sh -d ~/ -p $profile
+		mode="proxy"
+	fi
+	kubectl label namespace default istio-injection${istio_modes[$mode]}
+	for app in "${APPS[@]}"
 	do
-		if [[ $mode == 'noproxy' ]];then
-			unset SYSCALL
-		fi
-		kubectl label namespace default istio-injection${istio_modes[$mode]}
-		for app in "${APPS[@]}"
-		do
-			kubectl apply ${cmds[$app]} $APP_DIR/${paths[$app]}
-			wait
-			kubectl get po
-			. ./run_scripts/run_latency.sh latency_$mode $app ${maxrate[$app]} ${step[$app]} ${url[$app]} 0 1
-			#. ./run_scripts/run_latency.sh latency_$mode $app ${maxrate[$app]} ${step[$app]} ${url[$app]} 19 1
-			kubectl delete ${cmds[$app]} $APP_DIR/${paths[$app]}
-		done
+		echo $app ${scaling[$app]}
+		kubectl apply ${cmds[$app]} $APP_DIR/${paths[$app]}
+		#scale ${scaling[$app]}
+		scale $scale_factor
+		wait
+		kubectl get po
+		. ./run_scripts/run_latency.sh latency_$mode $app ${maxrate[$app]} ${step[$app]} ${url[$app]} ${minrate[$app]} ${scale_factor}
+		kubectl delete ${cmds[$app]} $APP_DIR/${paths[$app]}
 	done
-	echo "y" | setup_scripts/setup_istio.sh -d ~/ -c
+	
+	if [[ $profile != 'noproxy' ]];then
+		echo "y" | setup_scripts/setup_istio.sh -d ~/ -c
+	fi
 	sleep 5
 	output_dir=$OUTPATH/$profile
 	mkdir -p $output_dir
 	mv latency* $output_dir
 done
-cp -r $OUTPATH .
 rm -rf ~/istio*
 

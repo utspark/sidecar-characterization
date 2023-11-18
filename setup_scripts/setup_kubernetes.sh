@@ -1,3 +1,4 @@
+#!/bin/bash
 # Install packages
 
 if [[ $1 == "clean" ]]; then
