@@ -1,5 +1,4 @@
 static_resources:
-
   listeners:
   - name: listener_0
     address:
@@ -14,61 +13,33 @@ static_resources:
           stat_prefix: ingress_http
           generate_request_id: false
           http_filters:
-          - name: envoy.filters.http.local_ratelimit
-            typed_config:
-              "@type": type.googleapis.com/udpa.type.v1.TypedStruct
-              type_url: type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
-              value:
-                stat_prefix: http_local_rate_limiter
-                token_bucket:
-                  max_tokens: 15000
-                  tokens_per_fill: 15000
-                  fill_interval: 1s
-                filter_enabled:
-                  runtime_key: local_rate_limit_enabled
-                  default_value:
-                    numerator: 100
-                    denominator: HUNDRED
-                filter_enforced:
-                  runtime_key: local_rate_limit_enforced
-                  default_value:
-                    numerator: 100
-                    denominator: HUNDRED
-                response_headers_to_add:
-                  - append: false
-                    header:
-                      key: x-local-rate-limit
-                      value: 'true'
-          - name: envoy.filters.http.ip_tagging
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.ip_tagging.v3.IPTagging
-              request_type: BOTH
-              ip_tags:
-              - ip_tag_name: tagged_by_envoy
-                ip_list: 
-                - address_prefix: 0.0.0.0
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
               dynamic_stats: false
           route_config:
-            name: local_route
             validate_clusters: false
             virtual_hosts:
-            - name: local_service
+            - name: default
               domains: ["*"]
               routes:
-              - match:
-                  prefix: "/"
+              - match: {prefix: "/"}
                 route:
                   cluster: service_envoyproxy_io
-
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          common_tls_context:
+            tls_certificates:
+            - certificate_chain: {filename: "/proj/acses-PG0/sidecar-characterization/certs/cert.pem"}
+              private_key: {filename: "/proj/acses-PG0/sidecar-characterization/certs/key.pem"}
   clusters:
   - name: service_envoyproxy_io
     connect_timeout: 0.25s
     type: STATIC
     # Comment out the following line to test on v6 networks
-    dns_lookup_family: V4_ONLY
+    # dns_lookup_family: V4_ONLY
     load_assignment:
       cluster_name: service_envoyproxy_io
       endpoints:
