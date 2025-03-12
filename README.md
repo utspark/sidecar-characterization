@@ -1,49 +1,64 @@
+# SCoPE
+This toolkit allows an operator to perform distributed metrics collection and analysis.
+We utilize this tool to monitor sidecar processes in a distributed cloud microservice setup and characterize the performance of sidecars under different operating conditions.
+
+The tool collects both system level and hardware metrics that are configurable. This repository also contains a set of python notebook scripts that can be use to visualize collected metrics for analysis. Please cite our paper if you find this tool useful and use it in your work.
+
 # Setup
-# Service mesh setup
-Either setup using the Istio service with kubernetes or standalone Envoy.
-To install Istio and kubernetes, run setup_istio.sh. *Doesn't work
+## Configure nodes
+We can use our data collection framework on a single node or multi-node clusters. We require all nodes of a cluster to have a shared NFS drive which houses this toolkit. This is not necessary, but is required by this toolkit to synchronize and collect data from different clusters. All benchmarks and microbenchmarks can be run on single node cluster.
+Each node needs to be configured with required packages and tools by running `setup_scripts/setup_node.sh`.\\
 
-# Envoy standalone setup
-To install standalone Envoy, run setup_envoy_standalone.sh.
-Docker may not be installed correctly at first, so rerun the apt-get install line to install docker.io and docker-compose-plugin.
+Kubernetes can be deployed by running `setup_scripts/setup_kubernetes.sh master` on master node or in single node clusters. For multi-node clusters, all worker nodes can be setup by running `setup_scripts/setup_kubernetes.sh`.
 
-Run the echo server using the docker compose file with the command `docker compose up -d` if the container is not runnning already.
+## Service mesh setup
+We can use a complete service mesh setup or run standalone sidecars. Our paper uses complete service mesh setups to run complete benchmark applications while we utilize standalone envoy sidecars for the majority of characterization results to reduce system noise and result variability.
+
+### Setup service mesh
+We use Istio service mesh setups. Istio provides a few default configurations: `demo`, `default`, `minimal` etc.
+We can configure the cluster to use Istio by running `setup_scripts/setup_istio.sh -p <profile> -d <optional: dir>`.
+
+To uninstall only the istio components you can simply run `setup_scripts/setup_istio.sh -c`.
+
+### Envoy standalone setup
+To run standalone Envoy sidecars, you can simply run the installed `envoy` binary with configured options. Learn more about Envoy options by running `envoy --help`.
+Some of the Envoy configurations used in our microbenchmarks (e.g. SQL) are not available in the default Envoy distributions and needs to built or pulled separately.
+
+The official Envoy repository describes steps to build such extensions. We work around the problem by pulling Envoy-contrib extension pre-built package from existing official container releases [envoy-contrib-dev](https://hub.docker.com/r/envoyproxy/envoy-contrib-dev). 
+
+## Dependency repositories
+Our toolkit relies on a few other open-source projects like [wrk2](https://github.com/giltene/wrk2.git) and [pmu-tools](https://github.com/andikleen/pmu-tools.git) for load generation and collecting hardware metrics collections.\\
+Separately, we also use a few opensource benchmark applications in our profiling.
+
+All these repositories can be pulled and appropriately setup by running `setup_scripts/setup_git_tools.sh`.
 
 # Profiling setup
-Run the setup_perf.sh to install all components required to start profiling.
 
-Turn off SMT with 
-`sudo su -`
+## Profiling benchmark applications
 
-`echo off > /sys/devices/system/cpu/smt/control`
+### Latency throughput plots
+We can run data collection for running benchmark applications with and without service meshes by simply running
+`run_scripts/run_benchmark.sh`
 
-# Profiling
-Use start_envoy.sh to setup envoy with x number of worker threads/cores and y% CPU utilization.
-Ex. `./start_envoy.sh 2 50`
+For multinode clusters, we need to run `run_scripts/run_benchmark_scale.sh`.
 
-arg1 = number of core/worker threads
+### Cycle breakdown
+To understand the cycle level overheads per sidecar process in an application, we run `run_scripts/run_perf_cycles.sh` on all node-clusters.
 
-arg2 = CPU utilization per core
+This utilizes shared files in the NFS shared folder to synchronize between data-collection across nodes.
 
-OR
+## Profiling microbenchmark policies
 
-If Envoy is installed correctly, run Envoy with `envoy -c envoy-demo.yaml --concurrency 1 > /dev/null 2>&1 &`.
-Concurrency sets the number of worker threads for the Envoy process. Output is discarded and Envoy will run in the background.
+Microbenchmarking experiments evaluate the performance breakdown of network requests over a diverse set of Envoy filters. The list of filters are defined in `envoy_filters/policies/` and can be expanded based on an operators' needs.
 
-The record_perf.sh will take in 3-4 args.
-Ex. `./record_perf.sh stat no_filter 500` or `./record_perf.sh stat rate_limit mpki 1500`
+There are the following scripts that collects different metrics for these policies. All scripts are available under `run_scripts` folder.
+| Script Name | Functionality |
+|-------------|---------------|
+| run_perf    | Collects time series data for set of perf metrics |
+| run_perf_size | Collects perf metrics for changing payload sizes |
+| run_perf_toplev | Collects toplev metrics for different CPU loads |
+| run_perf_sql | Same as run_perf but for SQL backend |
 
-arg1 = stat or record, the mode that perf should run
+# Citation
 
-arg2 = policy applied to Envoy (no_filter, rate_limit, ip_tagging, both)
 
-arg3 = OPTIONAL metric or event to run perf on (see script for options), if omitted, default is cycles and instructions
-
-arg4 = rate of traffic to send to the echo server
-
-Recording should be stopped after 10 seconds using Ctrl+C.
-Results are outputted in perf_data directory.
-
-# Tips for Using Standalone Envoy
-If running multiple, edit the PROXY_ID field in the record_perf.sh script so perf knows the pid of the new Envoy proxy process. By default, it tracks the newest Envoy process.
-Also if not using start_envoy.sh, make sure to set the correct number of core and CPU limits to the Envoy process before profiling or else results will be incorrect.
