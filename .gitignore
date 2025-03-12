@@ -1,3 +1,4 @@
+*.svg
 *_results/
 *.old
 build/
