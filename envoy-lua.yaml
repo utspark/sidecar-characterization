@@ -1,10 +1,11 @@
 static_resources:
+
   listeners:
   - name: listener_0
     address:
       socket_address:
         address: 0.0.0.0
-        port_value: 10001
+        port_value: 10000
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
@@ -12,20 +13,32 @@ static_resources:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
           stat_prefix: ingress_http
           generate_request_id: false
-          # LOGGING
-          # access_log:
-          # - name: envoy.access_loggers.stdout
-          #   typed_config:
-          #     "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
-              # CUSTOM LOGGING
-              # log_format: 
-              #   text_format: "%LOCAL_REPLY_BODY%:%RESPONSE_CODE%: Custom Header: %REQ(Hello)%\n"
           http_filters:
+          - name: envoy.filters.http.lua
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+              inline_code:
+                function envoy_on_request(request_handle)
+                  local body = request_handle:body(true)
+                  local oldStr = body:getBytes(0, body:length())
+                  local count = tonumber(request_handle:headers():get("count"))
+
+                  local newStr = ""
+                  for i = 1,count,1 do
+                    newStr = ""
+                    for c in oldStr:gmatch"." do
+                      newStr = newStr .. tonumber(c) + 1
+                    end
+                    oldStr = newStr
+                  end
+
+                  request_handle:body():setBytes(newStr)
+                end
           - name: envoy.filters.http.fault
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
               abort:
-                http_status: 200
+                http_status: 404
                 percentage:
                   numerator: 100
           - name: envoy.filters.http.router
@@ -39,24 +52,18 @@ static_resources:
             - name: local_service
               domains: ["*"]
               routes:
-              - match: {prefix: "/"}
+              - match:
+                  prefix: "/"
                 route:
                   cluster: service_envoyproxy_io
-      transport_socket:
-        name: envoy.transport_sockets.tls
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
-          common_tls_context:
-            tls_certificates:
-            - certificate_chain: {filename: "certs/servercert.pem"}
-              private_key: {filename: "certs/serverkey.pem"}
+
 
   clusters:
   - name: service_envoyproxy_io
     connect_timeout: 0.25s
     type: STATIC
     # Comment out the following line to test on v6 networks
-    # dns_lookup_family: V4_ONLY
+    dns_lookup_family: V4_ONLY
     load_assignment:
       cluster_name: service_envoyproxy_io
       endpoints:
