@@ -1,5 +1,2 @@
-*_results/
+*.svg
 *.old
-build/
-bin/
-certs/
