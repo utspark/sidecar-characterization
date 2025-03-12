@@ -1,0 +1,140 @@
+#!/bin/bash
+#set -ex
+# Absolute path to this script, e.g. /home/user/bin/foo.sh
+SCRIPT=$(readlink -f "$0")
+# Absolute path this script is in, thus /home/user/bin
+SCRIPTDIR=$(dirname "$SCRIPT")
+
+export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../wrk2/
+
+declare -A POLICIES
+policy_prefix=envoy_filters/policies
+policy_files=$policy_prefix/*.yaml
+for file in ${policy_files[@]}
+do
+	IFS='/-.' read -ra tag <<< $file
+	POLICIES[${tag[3]}]=envoy-${tag[3]}.yaml
+done
+
+declare -A stat
+#stat[1]=instructions
+stat[1]=instructions,cycles,icache_16b.ifdata_stall
+stat[2]=instructions,frontend_retired.l1i_miss,frontend_retired.l2_miss,icache_64b.iftag_miss
+stat[3]=instructions,iTLB-load-misses,L1-icache-load-misses
+stat[4]=instructions,branches,branch-misses
+stat[5]=instructions,cache-misses,cache-references
+stat[6]=instructions,L1-dcache-load-misses,L1-dcache-loads,L1-dcache-stores
+stat[7]=instructions,l2_rqsts.code_rd_hit,l2_rqsts.code_rd_miss,l2_rqsts.all_code_rd
+stat[8]=instructions,l2_rqsts.demand_data_rd_hit,l2_rqsts.demand_data_rd_miss
+stat[9]=instructions,l2_rqsts.all_demand_miss,l2_rqsts.all_demand_data_rd
+stat[10]=instructions,LLC-loads,LLC-load-misses
+stat[11]=instructions,LLC-stores,LLC-store-misses
+
+URL="0.0.0.0:10000"
+#URL="127.0.0.1:32080"
+QUERY="select password FROM users WHERE username='user1';"
+
+#POLICIES['http_mix']=envoy-http_mix.yaml
+
+# Start application containers
+#docker compose -f run_scripts/docker-compose.yml up -d
+docker compose -f run_scripts/docker-compose-mysql.yml up -d
+
+function my_function() {
+	start_time="$(date -u +%s)"
+	for i in $(seq 1 500)
+	do
+#		{ time mysql -h 127.0.0.1 -P 10000 -u user -ppassword --ssl-mode=DISABLED -D mydatabase -e "$QUERY" > $DIR/${policy}/output ; } 2>> $DIR/${policy}/latency
+		echo "$QUERY" > mypipe > $DIR/${policy}/output
+	done
+	end_time="$(date -u +%s)"
+
+	elapsed="$(($end_time-$start_time))"
+	echo "Queries done in $elapsed s!"
+}
+
+#mkfifo mypipe
+
+dt=$(date '+%m%d')
+DIR=$1_$dt
+mkdir -p $DIR
+PROT='http'
+for policy in "${!POLICIES[@]}"
+do
+	if [[ $policy != 'sql' ]]; then
+		continue
+	fi
+	#if [[ -d $DIR/$policy ]]; then
+	#	continue
+	#fi
+	mkdir -p $DIR/$policy
+
+	if test -f $DIR/$policy/latency_r2; then
+		continue
+	fi
+	echo $policy
+	echo ${POLICIES[$policy]}
+	#start envoy
+	envoy-contrib-dev -c $policy_prefix/${POLICIES[$policy]} --concurrency 1 > /dev/null 2>&1 &
+	sleep 2
+	ps -C "envoy-contrib-d"
+	PID=$(ps -C "envoy-contrib-d" -o pid= | tail -1)
+	IFS=' ' read -ra worker <<< $(ps -T -C envoy-contrib-d -o spid,comm | grep worker_0)
+	WTID=${worker[0]}
+	sudo taskset -pc 1 $PID
+	#taskset -c 3 wrk --latency -t1 -d400s -R5000 "http://$URL/param?query=demo" > $DIR/${policy}/latency_r_${s}_$fcount &
+	#taskset -c 3 wrk --latency -t1 -d40s -R3000 "$PROT://$URL/plaintext" > $DIR/${policy}/latency_r2 &
+	#mysql -h 127.0.0.1 -P 10000 -u user -ppassword --ssl-mode=DISABLED -D mydatabase < mypipe &
+	#my_function &
+	#LG_PID=$(echo $!)
+	sleep 2
+	#echo $LG_PID
+	for s in "${stat[@]}"
+	do
+		#sudo perf record -C 1 -e $s -t $WTID -g -o $DIR/${policy}/${s}_record -- sleep 2 &
+		#sleep 1
+		
+		#$SCRIPTDIR/python_mysql.py 500
+		#sleep 1
+
+
+		$SCRIPTDIR/python_mysql.py 15000 &
+		LG_PID=$(echo $!)
+		sleep 0.1
+		sudo perf stat -C 1 -I 100 -e $s -t $WTID -o $DIR/${policy}/${s}_stat -- sleep 2
+		#my_function
+		wait $LG_PID
+		sleep 1
+	done
+	#echo "exit;" > mypipe
+	#toplev.py -v --no-desc -l1 -I 1000 --thread -p $PID sleep 5 2> $DIR/${policy}/toplev
+	#sleep 2
+	#wait $LG_PID
+
+	sudo kill $PID
+	sleep 2
+done
+
+#Stop all running containers
+docker compose -f run_scripts/docker-compose-mysql.yml stop
+
+# Process perf record
+for policy in "${!POLICIES[@]}"
+do
+	if [[ $policy != 'sql' ]]; then
+		continue
+	fi
+	cd $DIR/$policy
+	recs=instructions*_record*
+	for rec in ${recs[@]}
+	do
+		if [[ -f perf_report_$rec ]]; then
+			continue
+		fi
+		echo $rec
+		sudo perf report -i $rec -f > perf_report_$rec
+	done
+	cd -
+done
+pwd
+sudo chown -R $(id -u):$(id -g) $DIR
