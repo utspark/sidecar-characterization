@@ -32,13 +32,28 @@ stat[11]=instructions,LLC-stores,LLC-store-misses
 
 URL="0.0.0.0:10000"
 #URL="127.0.0.1:32080"
-CURL="curl -sl 0.0.0.0:10000 --header \"Content-Type: application/json\""
+QUERY="select password FROM users WHERE username='user1';"
 
 #POLICIES['http_mix']=envoy-http_mix.yaml
 
 # Start application containers
-#docker compose -f run_scripts/docker-compose-js_echoserver.yml up -d
-docker compose -f run_scripts/docker-compose-socketify.yml up -d
+#docker compose -f run_scripts/docker-compose.yml up -d
+docker compose -f run_scripts/docker-compose-mysql.yml up -d
+
+function my_function() {
+	start_time="$(date -u +%s)"
+	for i in $(seq 1 500)
+	do
+#		{ time mysql -h 127.0.0.1 -P 10000 -u user -ppassword --ssl-mode=DISABLED -D mydatabase -e "$QUERY" > $DIR/${policy}/output ; } 2>> $DIR/${policy}/latency
+		echo "$QUERY" > mypipe > $DIR/${policy}/output
+	done
+	end_time="$(date -u +%s)"
+
+	elapsed="$(($end_time-$start_time))"
+	echo "Queries done in $elapsed s!"
+}
+
+#mkfifo mypipe
 
 dt=$(date '+%m%d')
 DIR=$1_$dt
@@ -46,65 +61,69 @@ mkdir -p $DIR
 PROT='http'
 for policy in "${!POLICIES[@]}"
 do
-	if [[ $policy == 'demo' || $policy == 'default' ]]; then
+	if [[ $policy != 'sql' ]]; then
 		continue
-	fi
-	if [[ $policy == 'tls' ]]; then
-		PROT='https'
-	else
-		PROT='http'
 	fi
 	#if [[ -d $DIR/$policy ]]; then
 	#	continue
 	#fi
 	mkdir -p $DIR/$policy
 
-	if test -f $DIR/$policy/latency_r; then
+	if test -f $DIR/$policy/latency_r2; then
 		continue
 	fi
 	echo $policy
 	echo ${POLICIES[$policy]}
 	#start envoy
-	envoy -c $policy_prefix/${POLICIES[$policy]} --concurrency 1 > /dev/null 2>&1 &
+	envoy-contrib-dev -c $policy_prefix/${POLICIES[$policy]} --concurrency 1 > /dev/null 2>&1 &
 	sleep 2
-
-	PID=$(ps -C "envoy" -o pid= | tail -1)
-	IFS=' ' read -ra worker <<< $(ps -T -C envoy -o spid,comm | grep worker_0)
+	ps -C "envoy-contrib-d"
+	PID=$(ps -C "envoy-contrib-d" -o pid= | tail -1)
+	IFS=' ' read -ra worker <<< $(ps -T -C envoy-contrib-d -o spid,comm | grep worker_0)
 	WTID=${worker[0]}
 	sudo taskset -pc 1 $PID
-
-	#taskset -c 3 wrk --latency -t1 -d360s -R1000 "http://$URL/param?query=demo" > $DIR/${policy}/latency_r_${s}_$fcount &
-	taskset -c 3 wrk --latency -t1 -d150s -R5000 "$PROT://$URL/plaintext" > $DIR/${policy}/latency_r &
-	sleep 10
-	LG_PID=$(ps -C "wrk" -o pid= | tail -1)
+	#taskset -c 3 wrk --latency -t1 -d400s -R5000 "http://$URL/param?query=demo" > $DIR/${policy}/latency_r_${s}_$fcount &
+	#taskset -c 3 wrk --latency -t1 -d40s -R3000 "$PROT://$URL/plaintext" > $DIR/${policy}/latency_r2 &
+	#mysql -h 127.0.0.1 -P 10000 -u user -ppassword --ssl-mode=DISABLED -D mydatabase < mypipe &
+	#my_function &
+	#LG_PID=$(echo $!)
+	sleep 2
+	#echo $LG_PID
 	for s in "${stat[@]}"
 	do
-		sudo perf record -C 1 -e $s -t $WTID -g -o $DIR/${policy}/${s}_record -- sleep 10
-		#sleep 2
-		#taskset -c 3 wrk --latency -t1 -d5s -R100 "http://$URL/param?query=demo" > $DIR/${policy}/latency_r_${s}_$fcount 
+		#sudo perf record -C 1 -e $s -t $WTID -g -o $DIR/${policy}/${s}_record -- sleep 2 &
+		#sleep 1
 		
-		sleep 2
+		#$SCRIPTDIR/python_mysql.py 500
+		#sleep 1
 
-		sudo perf stat -C 1 -I 100 -e $s -t $WTID -o $DIR/${policy}/${s}_stat -- sleep 10
-		#sleep 2
-		#taskset -c 3 wrk --latency -t1 -d5s -R100 "http://$URL/param?query=demo" > $DIR/${policy}/latency_s_${s}_$fcount
-		sleep 2
+
+		$SCRIPTDIR/python_mysql.py 15000 &
+		LG_PID=$(echo $!)
+		sleep 0.1
+		sudo perf stat -C 1 -I 100 -e $s -t $WTID -o $DIR/${policy}/${s}_stat -- sleep 2
+		#my_function
+		wait $LG_PID
+		sleep 1
 	done
-		
-	toplev.py -v --no-desc -l1 -I 1000 --thread -p $PID sleep 5 2> $DIR/${policy}/toplev
-	sleep 2
-	wait $LG_PID
+	#echo "exit;" > mypipe
+	#toplev.py -v --no-desc -l1 -I 1000 --thread -p $PID sleep 5 2> $DIR/${policy}/toplev
+	#sleep 2
+	#wait $LG_PID
 
 	sudo kill $PID
-	sleep 3
+	sleep 2
 done
 
 #Stop all running containers
-docker compose -f run_scripts/docker-compose-socketify.yml stop
+docker compose -f run_scripts/docker-compose-mysql.yml stop
 
 # Process perf record
 for policy in "${!POLICIES[@]}"
 do
+	if [[ $policy != 'sql' ]]; then
+		continue
+	fi
 	cd $DIR/$policy
 	recs=instructions*_record*
 	for rec in ${recs[@]}
@@ -117,5 +136,5 @@ do
 	done
 	cd -
 done
-
+pwd
 sudo chown -R $(id -u):$(id -g) $DIR

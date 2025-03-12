@@ -6,8 +6,8 @@ import json
 import sys
 import argparse
 
-cpidCmd = "ps --ppid <PID> -o pid "
-tidCmd = "ps -T -o spid "     # add pid after command
+cpidCmd = "ps --ppid <PID> -o pid,cmd "
+tidCmd = "ps -T -o spid,cmd "     # add pid after command
 
 def checkname(name):
     if 'kube-' in name or 'calico' in name or 'dns' in name or 'etcd' in name or 'metrics' in name:
@@ -25,10 +25,11 @@ def get_ids(command, pid):
     if pid == None:
         return []
     process = subprocess.Popen(command.split(), stdout=subprocess.PIPE)
-    id_list, error = process.communicate()
-    id_list = str(id_list).split('\'')[1].split("\\n")[1:-1]
-    id_list = [x.split()[0] for x in id_list]
-    return id_list
+    id_out, error = process.communicate()
+    id_out = str(id_out).split('\'')[1].split("\\n")[1:-1]
+    id_list = [x.split()[0] for x in id_out]
+    cmd_list = [" ".join(x.split()[1:]) for x in id_out]
+    return id_list,cmd_list
 
 def get_pid(cat, data, write):
     pids = []
@@ -43,11 +44,12 @@ def get_pid(cat, data, write):
             for ctr in data[cgroup]:
                 if checkname(data[cgroup][ctr]["name"]) == cat:
                     pids.append(data[cgroup][ctr]["pid"])
-        if cat == "sidecar" or cat == "istio":
-            new_pids = []
-            for pid in pids:
-                new_pids += get_ids(cpidCmd.replace("<PID",pid),pid)
-            pids += new_pids
+        #if cat == "sidecar" or cat == "istio":
+        new_pids = []
+        for pid in pids:
+            ids,cmds = get_ids(cpidCmd.replace("<PID>",pid),pid)
+            new_pids += ids
+        pids += new_pids
     if write == True:
         print(','.join(pids))
     return pids
@@ -55,6 +57,7 @@ def get_pid(cat, data, write):
 def get_ctr_info():
     ctrdContainers = "sudo ctr --namespace k8s.io containers ls"
     ctrdTasks = "sudo ctr --namespace k8s.io tasks ls"
+    #ctr-name = "kubectl get pods -o jsonpath='{range .items[*]}{@.metadata.name}{\" \"}{@..status.containerStatuses[*].containerID}{\" \"}{@..status.containerStatuses[*].image}{\"\n\"}{end}'"
     
     process = subprocess.Popen(ctrdContainers.split(), stdout=subprocess.PIPE)
     container_list, error = process.communicate()
@@ -70,20 +73,22 @@ def get_ctr_info():
         temp = task.split()
         cid = temp[0]
         pid = temp[1]
-        cpid_list = get_ids(cpidCmd.replace("<PID>", pid),pid)
-        if len(cpid_list) > 1:
-            print("something to check with PID"+pid+". Has cpid="+str(cpid_list))
+        cpid_list,ccmd_list = get_ids(cpidCmd.replace("<PID>",pid),pid)
+        #if len(cpid_list) > 1:
+        #    print("something to check with PID"+pid+". Has cpid="+str(cpid_list))
         if len(cpid_list) == 0:
             cpid = None
         else:
             cpid = cpid_list[0]
-        children = {}
-        for cpid in cpid_list:
-            ctid = get_ids(tidCmd+cpid, cpid)
-            children[cpid] = ctid
-
+        children_ids = {}
+        children_cmd = {}
+        for cpid,ccmd in zip(cpid_list,ccmd_list):
+            ctid,ctcmd = get_ids(tidCmd+cpid, cpid)
+            children_ids[cpid] = ctid
+            children_cmd[ccmd] = ctcmd
+        tids,tcmds = get_ids(tidCmd+pid, pid)
         #containers[cid] = {'pid': pid, 'cpid': cpid, 'tid': get_ids(tidCmd+pid, pid), 'ctid': get_ids(tidCmd+str(cpid), cpid)}
-        containers[cid] = {'pid': pid, 'tid': get_ids(tidCmd+pid, pid), 'cpid': children}
+        containers[cid] = {'pid': pid, 'tid': tids, 'tid_cmd': tcmds, 'cpid': children_ids, 'cpid_cmd': children_cmd}
     
     for ctr in container_list[1:-1]:
         temp = ctr.split()
@@ -112,14 +117,16 @@ parser.add_argument("-t", "--type", type=str, choices=["kube", "istio", "app", "
                             help="display all pids of given type")
 parser.add_argument("-d", "--dump", type=str, choices=["pickle", "json"],
                             help="increase output verbosity")
+parser.add_argument("-p", "--path", type=str,
+                            help="path to save pickle file")
 args = parser.parse_args()
 
 details = get_ctr_info()
 
 if args.dump == 'pickle':
-    with open('saved_dictionary.pkl', 'wb') as f:
+    with open(args.path+'/saved_dictionary.pkl', 'wb') as f:
         pickle.dump(details, f)
-    print(details)
+    #print(details)
 elif args.dump == 'json':
     json_obj = json.dumps(details, indent = 2)
     print(json_obj)

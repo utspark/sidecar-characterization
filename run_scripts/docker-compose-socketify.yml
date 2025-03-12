@@ -1,0 +1,13 @@
+version: '3'
+services:
+
+  echo_server:
+    image: utspark/socketify
+    ports:
+    - "3000:3000" 
+
+# another echo server for routing
+  echo_server_2:
+    image: utspark/socketify
+    ports:
+    - "3100:3000"

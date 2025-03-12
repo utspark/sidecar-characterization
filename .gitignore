@@ -1,3 +1,6 @@
 *.svg
 *_results/
 *.old
+build/
+bin/
+certs/
