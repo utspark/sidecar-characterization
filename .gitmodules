@@ -1,0 +1,15 @@
+[submodule "workloads/OnlineBoutique"]
+	path = workloads/OnlineBoutique
+	url = https://github.com/GoogleCloudPlatform/microservices-demo.git
+[submodule "workloads/DeathStarBench"]
+	path = workloads/DeathStarBench
+	url = https://github.com/delimitrou/DeathStarBench.git
+[submodule "workloads/Istio"]
+	path = workloads/Istio
+	url = https://github.com/istio/istio.git
+[submodule "tools/wrk2"]
+	path = tools/wrk2
+	url = https://github.com/giltene/wrk2.git
+[submodule "tools/pmu-tools"]
+	path = tools/pmu-tools
+	url = https://github.com/andikleen/pmu-tools.git

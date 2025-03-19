@@ -1,10 +1,14 @@
 #!/bin/bash
-# Install packages
+SCRIPT=$(readlink -f "$0")
+SCRIPTDIR=$(dirname "$SCRIPT")
+PARENTDIR=$(builtin cd $SCRIPTDIR; pwd)
+build=$PARENTDIR/build
 
+# Install packages
 if [[ $1 == "clean" ]]; then
 	sudo kubeadm reset
-	> join_command
-	rm calico.yaml
+	> $build/join_command
+	rm $build/calico.yaml
 else
 	sudo swapoff -a
 	sudo systemctl stop firewalld
@@ -24,7 +28,7 @@ else
 	sudo apt-get install -y kubelet kubeadm kubectl
 	
 	if [[ $1 == "master" ]]; then
-		> join_command
+		> $build/join_command
 		sudo kubeadm init
 		mkdir -p $HOME/.kube
 		sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
@@ -33,18 +37,19 @@ else
 		node=$(kubectl get nodes | awk 'FNR==2{split($0,a); print a[1]}')
 		kubectl taint nodes $node node-role.kubernetes.io/control-plane-
 		
-		curl https://raw.githubusercontent.com/projectcalico/calico/v3.25.1/manifests/calico.yaml -O
+		curl https://raw.githubusercontent.com/projectcalico/calico/v3.25.1/manifests/calico.yaml -O $build/calico.yaml
+		curl https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml	-O $build/components.yaml
 		# Edit CIDR/Subnet, IP_AUTODETECT if calico fails
-		kubectl apply -f calico.yaml
-		kubectl apply -f components.yaml
+		kubectl apply -f $build/calico.yaml
+		kubectl apply -f $build/components.yaml
 		
 		# Join using the following output
-		sudo kubeadm token create --print-join-command > join_command
+		sudo kubeadm token create --print-join-command > $build/join_command
 	else
-		while [ ! -s join_command ]
+		while [ ! -s $build/join_command ]
 		do
 			sleep 5
 		done
-		sudo bash join_command
+		sudo bash $build/join_command
 	fi
 fi

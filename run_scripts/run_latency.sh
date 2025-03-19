@@ -11,9 +11,9 @@ SCRIPT=$(readlink -f "$0")
 # Absolute path this script is in, thus /home/user/bin
 SCRIPTDIR=$(dirname "$SCRIPT")
 
-if [ -z $WRK ]; then
-	export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../wrk2/
-fi
+#if [ -z $WRK ]; then
+#	export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../wrk2/
+#fi
 echo "PATH $PATH"
 echo "SYSCALL $SYSCALL"
 if [ ! -z $SYSCALL ]; then

@@ -49,7 +49,7 @@ while getopts 'a:cp:m:lh' opt; do
 done
 shift "$(($OPTIND -1))"
 
-export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../$WRK/
+#export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../$WRK/
 
 declare -A stat
 stat[1]=instructions
@@ -135,14 +135,14 @@ function wait {
 	done
 }
 
-APP_DIR=$SCRIPTDIR/../../benchmark_apps
+APP_DIR=$SCRIPTDIR/workloads
 declare -A paths
 declare -A cmds
 declare -A maxrate
 declare -A step
 declare -A url
 declare -A istio_modes
-paths=(["bookinfo"]="istio-1.18.1/samples/bookinfo/platform/kube/bookinfo-4.yaml" ["hotelreservation"]="DeathStarBench/hotelReservation/kubernetes" ["onlineboutique"]="OnlineBoutique/release/kubernetes-manifests.yaml")
+paths=(["bookinfo"]="Istio/samples/bookinfo/platform/kube/bookinfo-4.yaml" ["hotelreservation"]="DeathStarBench/hotelReservation/kubernetes" ["onlineboutique"]="OnlineBoutique/release/kubernetes-manifests.yaml")
 cmds=(["bookinfo"]="-f" ["hotelreservation"]="-Rf" ["onlineboutique"]="-f")
 rate=(["bookinfo"]="20" ["hotelreservation"]="20" ["onlineboutique"]="20")
 url=(["bookinfo"]="/productpage" ["hotelreservation"]="/hotels?inDate=2015-04-09\&outDate=2015-04-10\&lat=37.7749\&lon=-122.4194" ["onlineboutique"]="/")

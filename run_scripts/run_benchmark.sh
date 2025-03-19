@@ -43,7 +43,7 @@ while getopts 'a:cp:h' opt; do
 done
 shift "$(($OPTIND -1))"
 
-export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../$WRK/
+#export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../$WRK/
 
 function wait {
 	all_ready=0
@@ -80,14 +80,14 @@ function load_gen {
 	done
 }
 
-APP_DIR=$SCRIPTDIR/../../benchmark_apps
+APP_DIR=$SCRIPTDIR/workloads
 declare -A paths
 declare -A cmds
 declare -A maxrate
 declare -A step
 declare -A url
 declare -A istio_modes
-paths=(["bookinfo"]="istio-1.18.1/samples/bookinfo/platform/kube/bookinfo.yaml" ["hotelreservation"]="DeathStarBench/hotelReservation/kubernetes" ["onlineboutique"]="OnlineBoutique/release/kubernetes-manifests.yaml")
+paths=(["bookinfo"]="Istio/samples/bookinfo/platform/kube/bookinfo.yaml" ["hotelreservation"]="DeathStarBench/hotelReservation/kubernetes" ["onlineboutique"]="OnlineBoutique/release/kubernetes-manifests.yaml")
 cmds=(["bookinfo"]="-f" ["hotelreservation"]="-Rf" ["onlineboutique"]="-f")
 maxrate=(["bookinfo"]="90" ["hotelreservation"]="300" ["onlineboutique"]="25")
 step=(["bookinfo"]="15" ["hotelreservation"]="50" ["onlineboutique"]="2")

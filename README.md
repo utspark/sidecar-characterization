@@ -26,6 +26,14 @@ Some of the Envoy configurations used in our microbenchmarks (e.g. SQL) are not 
 
 The official Envoy repository describes steps to build such extensions. We work around the problem by pulling Envoy-contrib extension pre-built package from existing official container releases [envoy-contrib-dev](https://hub.docker.com/r/envoyproxy/envoy-contrib-dev). 
 
+Steps to get Envoy binaries from container images (e.g. envoy-contrib-dev):
+```
+> docker pull envoyproxy/envoy-contrib-dev
+> docker run -d --name envoy -p 9901:9901 -p 10000:10000 envoyproxy/envoy-contrib-dev:latest
+> docker cp envoy:/usr/local/bin/envoy build/bin/envoy-contrib-dev-latest
+> docker stop envoy; docker rm envoy
+```
+
 ## Dependency repositories
 Our toolkit relies on a few other open-source projects like [wrk2](https://github.com/giltene/wrk2.git) and [pmu-tools](https://github.com/andikleen/pmu-tools.git) for load generation and collecting hardware metrics collections.\\
 Separately, we also use a few opensource benchmark applications in our profiling.

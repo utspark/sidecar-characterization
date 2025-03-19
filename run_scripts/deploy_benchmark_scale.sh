@@ -44,7 +44,7 @@ while getopts 'a:cp:h' opt; do
 done
 shift "$(($OPTIND -1))"
 
-export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../$WRK/
+#export PATH=$PATH:$SCRIPTDIR/../../pmu-tools/:$SCRIPTDIR/../../$WRK/
 
 function wait {
 	all_ready=0
